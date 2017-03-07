@@ -1,4 +1,4 @@
-# redbud
+![](redbud.png)
 
 ## Introduction
 
@@ -6,8 +6,8 @@
 
 ## Featrue
 
-* cross-platform / cross-compiler
-* covering a wide range
+* Cross-platform / Cross-compiler
+* Covering a wide range
 * Interface is easy to use
 
 ## Join
