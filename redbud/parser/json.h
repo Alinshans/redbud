@@ -163,8 +163,8 @@ class Json
   // JSON object, you can initialize a JSON value like:
   //   Json j1 = Json::null_array;
   //   Json j2 = Json::null_object;
-  // Notes that, if a JSON is a null_json, it can be converted to any JSON
-  // type in the next operation, e.g.:
+  // Notes that, if a JSON is a null_json, it can be converted to a JSON
+  // array or a JSON object in the next operation, e.g.:
   //   Json j;
   //   j.push_back(0);  // push_back operation just for JSON array,
   //                    // so the j become a JSON array.
@@ -174,15 +174,11 @@ class Json
   static Json null_object;
 
   // Decodes from a string, follows the rules of RFC 7159 and ECMA-404.
-  // This function does not throw an exception, it will return null_json
-  // if parses failed, otherwise, it will return the result of parsing.
+  // if parses failed, it will yield an exception.
   //
   // Example:
-  //   Json j = Json::parse("{\"key\":1}"); // Successful, j is an object.
-  //   std::string err;
-  //   Json j2 = Json::parse("{:1}", err);  // Failed, j is an null_json,
-  //                                        // exception information is 
-  //                                        // stored in err.
+  //   Json j1 = Json::parse("{\"key\":1}"); // Successful, j is an object.
+  //   Json j2 = Json::parse("{:1}");        // Failed, yields an exception.
   static Json parse(const std::string& s);
 
   // --------------------------------------------------------------------------
@@ -319,7 +315,7 @@ class Json
   bool is_object() const;
 
   // Converts a JSON value to a corresponding value.
-  // If the types do not match, a default value is returned.
+  // If the types do not match, it will yield an exception.
   bool               as_bool()   const;
   double             as_number() const;
   const std::string& as_string() const;
@@ -350,16 +346,19 @@ class Json
   // True if size() == 0.
   bool   empty() const;
 
-  // Inserts a Json value, only for Json array.
+  // Inserts a Json value, only for JSON array.
   void push_back(const Json& e);
 
-  // Inserts a key-value pair, only for Json object.
+  // Pops up the last JsonValue in this Json, only for JSON array.
+  void pop_back();
+
+  // Inserts a key-value pair, only for JSON object.
   void insert(const std::pair<std::string, Json>& p);
 
-  // Deletes the Json value at subscript i of the Json array.
+  // Deletes the Json value at subscript i of the JSON array.
   void erase(size_t i);
 
-  // Deletes the key-value pair of the Json object.
+  // Deletes the key-value pair of the JSON object.
   void erase(const std::string& key);
   
   // After calling this function, this Json will become:
@@ -373,7 +372,7 @@ class Json
   void clear();
 
   // Serializes this JSON and saves the result in str. Notes that for
-  // those characters in the range of ASCII(i.e, value from 0 to 127)
+  // those characters in the range of ASCII(i.e., value from 0 to 127)
   // will be saved as ASCII code, the other will be saved as Unicode
   // (especially UTF-8), and, the hex character is in uppercase form.
   //
@@ -387,7 +386,7 @@ class Json
   // Likes the previous one, returns a std::string as the result.
   std::string dumps() const;
 
-  // Passes in a string, and saves the parsed result in this object.
+  // Passes in a string, and saves the parsed result in this Json.
   void loads(const std::string& str);
 
   // Output this Json text, the first parameter can be set to the 
@@ -424,7 +423,7 @@ class Json
   // Overloads standard input / output.
   // operator<< actually calls print(PrintType::Compact).
   // operator>> will parse the input string first, so if the input string
-  // is a invalid JSON value, a null_json will get.
+  // is a invalid JSON value, it will yield an exception.
 
  public:
   friend std::ostream& operator<<(std::ostream& os, const Json& j);
