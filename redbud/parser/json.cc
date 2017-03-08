@@ -78,14 +78,15 @@ class JsonValue
 
   // If the types does not match, the corresponding instance
   // will be returned.
-  virtual bool                get_bool_unsafe() const;
-  virtual double              get_number_unsafe() const;
-  virtual const std::string&  get_string_unsafe() const;
-  virtual const Json::Array&  get_array_unsafe() const;
-  virtual const Json::Object& get_object_unsafe() const;
+  virtual bool                get_bool_safe() const;
+  virtual double              get_number_safe() const;
+  virtual const std::string&  get_string_safe() const;
+  virtual const Json::Array&  get_array_safe() const;
+  virtual const Json::Object& get_object_safe() const;
 
   // STL-like access.
   virtual void                push_back(const Json& e);
+  virtual void                pop_back();
   virtual void                insert(const std::pair<std::string, Json>& p);
   virtual void                erase(size_t i);
   virtual void                erase(const std::string& key);
@@ -330,7 +331,7 @@ const Json& JsonValue::get_value_safe(const std::string& key) const
   return Json::null_json;
 }
 
-bool JsonValue::get_bool_unsafe() const
+bool JsonValue::get_bool_safe() const
 {
   if (type() != Json::Type::kJsonBool)
   {
@@ -339,7 +340,7 @@ bool JsonValue::get_bool_unsafe() const
   return static_cast<const JsonBool&>(*this).value_;
 }
 
-double JsonValue::get_number_unsafe() const
+double JsonValue::get_number_safe() const
 {
   if (type() != Json::Type::kJsonNumber)
   {
@@ -348,7 +349,7 @@ double JsonValue::get_number_unsafe() const
   return static_cast<const JsonNumber&>(*this).value_;
 }
 
-const std::string& JsonValue::get_string_unsafe() const
+const std::string& JsonValue::get_string_safe() const
 {
   if (type() != Json::Type::kJsonString)
   {
@@ -357,7 +358,7 @@ const std::string& JsonValue::get_string_unsafe() const
   return static_cast<const JsonString&>(*this).value_;
 }
 
-const Json::Array& JsonValue::get_array_unsafe() const
+const Json::Array& JsonValue::get_array_safe() const
 {
   if (type() != Json::Type::kJsonArray)
   {
@@ -366,7 +367,7 @@ const Json::Array& JsonValue::get_array_unsafe() const
   return static_cast<const JsonArray&>(*this).value_;
 }
 
-const Json::Object& JsonValue::get_object_unsafe() const
+const Json::Object& JsonValue::get_object_safe() const
 {
   if (type() != Json::Type::kJsonObject)
   {
@@ -379,6 +380,12 @@ void JsonValue::push_back(const Json& e)
 {
   auto& arr = static_cast<JsonArray&>(*this).value_;
   arr.push_back(e);
+}
+
+void JsonValue::pop_back()
+{
+  auto& arr = static_cast<JsonArray&>(*this).value_;
+  arr.pop_back();
 }
 
 void JsonValue::insert(const std::pair<std::string, Json>& p)
@@ -591,47 +598,32 @@ bool Json::is_object() const { return type() == Type::kJsonObject; }
 
 bool Json::as_bool() const
 {
-  if (type() == Type::kNull)
-  {
-    return false;
-  }
-  return node_.get()->get_bool_unsafe();
+  EXPECT_BOOL;
+  return node_.get()->get_bool_safe();
 }
 
 double Json::as_number() const
 {
-  if (type() == Type::kNull)
-  {
-    return 0.0;
-  }
-  return node_.get()->get_number_unsafe();
+  EXPECT_NUMBER;
+  return node_.get()->get_number_safe();
 }
 
 const std::string& Json::as_string() const
 {
-  if (type() == Type::kNull)
-  {
-    return JsonValue::get_string_instance();
-  }
-  return node_.get()->get_string_unsafe();
+  EXPECT_STRING;
+  return node_.get()->get_string_safe();
 }
 
 const Json::Array& Json::as_array() const
 {
-  if (type() == Type::kNull)
-  {
-    return JsonValue::get_array_instance();
-  }
-  return node_.get()->get_array_unsafe();
+  EXPECT_ARRAY;
+  return node_.get()->get_array_safe();
 }
 
 const Json::Object& Json::as_object() const
 {
-  if (type() == Type::kNull)
-  {
-    return JsonValue::get_object_instance();
-  }
-  return node_.get()->get_object_unsafe();
+  EXPECT_OBJECT;
+  return node_.get()->get_object_safe();
 }
 
 // ----------------------------------------------------------------------------
@@ -639,10 +631,6 @@ const Json::Object& Json::as_object() const
 
 Json& Json::operator[](size_t index)
 {
-  if (type() == Type::kJsonNull || type() == Type::kNull)
-  {
-    *this = null_array;
-  }
   EXPECT_ARRAY;
   REDBUD_THROW_EX_IF(size() <= index, "Json index out of range.");
   return node_.get()->get_value_safe(index);
@@ -698,6 +686,12 @@ void Json::push_back(const Json& e)
   }
   EXPECT_ARRAY;
   node_.get()->push_back(e);
+}
+
+void Json::pop_back()
+{
+  EXPECT_ARRAY;
+  node_.get()->pop_back();
 }
 
 void Json::insert(const std::pair<std::string, Json>& p)
