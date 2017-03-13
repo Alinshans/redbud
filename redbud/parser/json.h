@@ -19,7 +19,7 @@
 #include <string>            // string
 #include <vector>            // vector
 #include <memory>            // shared_ptr
-#include <utility>           // pair, move
+#include <utility>           // pair, move, forward
 #include <initializer_list>  // initializer_list
 
 namespace redbud
@@ -158,6 +158,11 @@ class Json
 
   friend class JsonValue;
 
+  // Alias declarations for value of JSON array and JSON object.
+ private:
+  using ArrayValue  = Array::value_type;
+  using ObjectValue = Object::value_type;
+
   // --------------------------------------------------------------------------
   // Static data member, for empty JSON value, empty JSON array and empty
   // JSON object, you can initialize a JSON value like:
@@ -169,6 +174,7 @@ class Json
   //   j.push_back(0);  // push_back operation just for JSON array,
   //                    // so the j become a JSON array.
   //   j["key"] = 1;    // error! j is a JSON array.
+ public:
   static Json null_json;
   static Json null_array;
   static Json null_object;
@@ -179,7 +185,8 @@ class Json
   // Example:
   //   Json j1 = Json::parse("{\"key\":1}"); // Successful, j is an object.
   //   Json j2 = Json::parse("{:1}");        // Failed, yields an exception.
-  static Json parse(const std::string& s);
+  static Json parse(const std::string& json_text);
+  static Json parse(std::string&& json_text);
 
   // --------------------------------------------------------------------------
   // Constructor / Copy constructor / Move constructor / Destructor
@@ -292,10 +299,10 @@ class Json
   //        {"array","in array"}
   //      }}
   //    };
-  Json(const std::initializer_list<Json>&);
+  Json(std::initializer_list<Json> ilist);
   
   // The same as the previous one.
-  Json& operator=(const std::initializer_list<Json>&);
+  Json& operator=(std::initializer_list<Json> ilist);
   
   // --------------------------------------------------------------------------
 
@@ -335,7 +342,7 @@ class Json
 
   // Return value correspondence table:
   // Json type      return value
-  // null     --->        0
+  // null     --->        1
   // bool     --->        1
   // number   --->        1
   // string   --->        1
@@ -344,16 +351,16 @@ class Json
   size_t size() const;
 
   // True if size() == 0.
-  bool   empty() const;
+  bool empty() const;
 
   // Inserts a Json value, only for JSON array.
-  void push_back(const Json& e);
+  void push_back(ArrayValue&& e);
 
   // Pops up the last JsonValue in this Json, only for JSON array.
   void pop_back();
 
   // Inserts a key-value pair, only for JSON object.
-  void insert(const std::pair<std::string, Json>& p);
+  void insert(ObjectValue&& p);
 
   // Deletes the Json value at subscript i of the JSON array.
   void erase(size_t i);
@@ -387,7 +394,7 @@ class Json
   std::string dumps() const;
 
   // Passes in a string, and saves the parsed result in this Json.
-  void loads(const std::string& str);
+  void loads(std::string&& str);
 
   // Output this Json text, the first parameter can be set to the 
   // output format(the default is PrintType::Compact), and the second
