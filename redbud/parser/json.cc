@@ -56,12 +56,8 @@ class JsonValue
 
   friend class Json;
 
-  // static member function, returns the instance which has
-  // a default value of corresponding type.
-  static std::nullptr_t       get_null_instance();
-  static bool                 get_bool_instance();
-  static double               get_number_instance();
-  static const std::string&   get_string_instance();
+  // static member function, returns the empty instance of
+  // JSON array or JSON object.
   static const Json::Array&   get_array_instance();
   static const Json::Object&  get_object_instance();
 
@@ -85,9 +81,9 @@ class JsonValue
   virtual const Json::Object& get_object_safe() const;
 
   // STL-like access.
-  virtual void                push_back(const Json& e);
+  virtual void                push_back(Json::ArrayValue&& e);
   virtual void                pop_back();
-  virtual void                insert(const std::pair<std::string, Json>& p);
+  virtual void                insert(Json::ObjectValue&& p);
   virtual void                erase(size_t i);
   virtual void                erase(const std::string& key);
   virtual void                clear() = 0;
@@ -107,7 +103,7 @@ class JsonNull : public JsonValue
 
   // override
   Json::Type type() const override { return Json::Type::kJsonNull; }
-  size_t     size() const override { return 0; }
+  size_t     size() const override { return 1; }
   void       clear()      override {}
 
   // Implicit conversion.
@@ -263,30 +259,6 @@ class JsonObject : public JsonValue
 // ----------------------------------------------------------------------------
 // Static functions.
 
-std::nullptr_t JsonValue::get_null_instance()
-{
-  static std::nullptr_t result = nullptr;
-  return result;
-}
-
-bool JsonValue::get_bool_instance()
-{
-  static bool result = false;
-  return result;
-}
-
-double JsonValue::get_number_instance()
-{
-  static double result = 0.0;
-  return result;
-}
-
-const std::string& JsonValue::get_string_instance()
-{
-  static const std::string& result = std::string();
-  return result;
-}
-
 const Json::Array& JsonValue::get_array_instance()
 {
   static const Json::Array& result = Json::Array();
@@ -323,63 +295,40 @@ Json& JsonValue::get_value_safe(const std::string& key)
 const Json& JsonValue::get_value_safe(const std::string& key) const
 {
   const auto& obj = static_cast<const JsonObject&>(*this).value_;
-  auto it = obj.find(key);
-  if (it != obj.end())
-  {
-    return it->second;
-  }
-  return Json::null_json;
+  const auto& key_pos = obj.find(key);
+  REDBUD_THROW_EX_IF(key_pos == obj.cend(), "Json no such key.");
+  return key_pos->second;
 }
 
 bool JsonValue::get_bool_safe() const
 {
-  if (type() != Json::Type::kJsonBool)
-  {
-    return get_bool_instance();
-  }
   return static_cast<const JsonBool&>(*this).value_;
 }
 
 double JsonValue::get_number_safe() const
 {
-  if (type() != Json::Type::kJsonNumber)
-  {
-    return get_number_instance();
-  }
   return static_cast<const JsonNumber&>(*this).value_;
 }
 
 const std::string& JsonValue::get_string_safe() const
 {
-  if (type() != Json::Type::kJsonString)
-  {
-    return get_string_instance();
-  }
   return static_cast<const JsonString&>(*this).value_;
 }
 
 const Json::Array& JsonValue::get_array_safe() const
 {
-  if (type() != Json::Type::kJsonArray)
-  {
-    return get_array_instance();
-  }
   return static_cast<const JsonArray&>(*this).value_;
 }
 
 const Json::Object& JsonValue::get_object_safe() const
 {
-  if (type() != Json::Type::kJsonObject)
-  {
-    return get_object_instance();
-  }
   return static_cast<const JsonObject&>(*this).value_;
 }
 
-void JsonValue::push_back(const Json& e)
+void JsonValue::push_back(Json::ArrayValue&& e)
 {
   auto& arr = static_cast<JsonArray&>(*this).value_;
-  arr.push_back(e);
+  arr.push_back(std::forward<Json::ArrayValue&&>(e));
 }
 
 void JsonValue::pop_back()
@@ -388,7 +337,7 @@ void JsonValue::pop_back()
   arr.pop_back();
 }
 
-void JsonValue::insert(const std::pair<std::string, Json>& p)
+void JsonValue::insert(Json::ObjectValue&& p)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   obj[p.first] = p.second;
@@ -419,9 +368,14 @@ Json Json::null_object = Json::Object();
 // ----------------------------------------------------------------------------
 // Static functions.
 
-Json Json::parse(const std::string& s)
+Json Json::parse(const std::string& json_text)
 {
-  return JsonParser::parse(s);
+  return JsonParser::parse(json_text);
+}
+
+Json Json::parse(std::string&& json_text)
+{
+  return JsonParser::parse(std::move(json_text));
 }
 
 // ----------------------------------------------------------------------------
@@ -529,7 +483,7 @@ Json& Json::operator=(Json&& j)
 // ----------------------------------------------------------------------------
 // initializer_list
 
-Json::Json(const std::initializer_list<Json>& ilist)
+Json::Json(std::initializer_list<Json> ilist)
 {
   bool maybe_object =
     std::all_of(ilist.begin(), ilist.end(), [&ilist](const Json& v)
@@ -551,7 +505,7 @@ Json::Json(const std::initializer_list<Json>& ilist)
   }
 }
 
-Json& Json::operator=(const std::initializer_list<Json>& ilist)
+Json& Json::operator=(std::initializer_list<Json> ilist)
 {
   bool maybe_object =
     std::all_of(ilist.begin(), ilist.end(), [&ilist](const Json& v)
@@ -645,7 +599,7 @@ const Json& Json::operator[](size_t index) const
 
 Json& Json::operator[](const std::string& key)
 {
-  if (type() == Type::kJsonNull || type() == Type::kNull)
+  if (type() == Type::kNull)
   {
     *this = null_object;
   }
@@ -676,34 +630,35 @@ bool Json::empty() const
   return size() == 0;
 }
 
-void Json::push_back(const Json& e)
+void Json::push_back(ArrayValue&& e)
 {
-  if (type() == Type::kJsonNull || type() == Type::kNull)
+  if (type() == Type::kNull)
   {
     *this = null_array;
-    node_.get()->push_back(e);
+    node_.get()->push_back(std::forward<ArrayValue>(e));
     return;
   }
   EXPECT_ARRAY;
-  node_.get()->push_back(e);
+  node_.get()->push_back(std::forward<ArrayValue>(e));
 }
 
 void Json::pop_back()
 {
   EXPECT_ARRAY;
+  REDBUD_THROW_EX_IF(size() == 0, "Json has no value before pop.");
   node_.get()->pop_back();
 }
 
-void Json::insert(const std::pair<std::string, Json>& p)
+void Json::insert(ObjectValue&& p)
 {
-  if (type() == Type::kJsonNull || type() == Type::kNull)
+  if (type() == Type::kNull)
   {
     *this = null_object;
-    node_.get()->insert(p);
+    node_.get()->insert(std::forward<ObjectValue>(p));
     return;
   }
   EXPECT_OBJECT;
-  node_.get()->insert(p);
+  node_.get()->insert(std::forward<ObjectValue>(p));
 }
 
 void Json::erase(size_t i)
@@ -734,6 +689,7 @@ void Json::clear()
 void Json::dumps(std::string& str) const
 {
   str.clear();
+  str.reserve(size() << 6);
   _dumps_from(*this, str);
 }
 
@@ -744,9 +700,9 @@ std::string Json::dumps() const
   return str;
 }
 
-void Json::loads(const std::string& str)
+void Json::loads(std::string&& str)
 {
-  *this = JsonParser::parse(str);
+  *this = JsonParser::parse(std::forward<std::string>(str));
 }
 
 // ----------------------------------------------------------------------------
@@ -817,8 +773,8 @@ void Json::_dumps_from(const Json& j, std::string& str) const
   }
 }
 
-#define GETC(ch)        (static_cast<uint8_t>(ch))
-#define PUTC(ch)        str.push_back(static_cast<char>(ch))
+#define GETC(ch)       static_cast<uint8_t>(ch)
+#define PUTC(ch)       str.push_back(static_cast<char>(ch))
 #define CODE(bin, pre) (static_cast<uint8_t>(bin) & pre)
 
 void Json::_dumps_string(const std::string& s, std::string& str) const
