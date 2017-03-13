@@ -31,6 +31,12 @@ Json JsonParser::parse(const std::string& s)
   return jp.parse_json();
 }
 
+Json JsonParser::parse(std::string&& s)
+{
+  JsonParser jp(std::move(s));
+  return jp.parse_json();
+}
+
 // ----------------------------------------------------------------------------
 // Copy constructor.
 
@@ -39,7 +45,7 @@ JsonParser::JsonParser(const std::string& s)
 {
 }
 
-JsonParser::JsonParser(std::string && s)
+JsonParser::JsonParser(std::string&& s)
   :r(std::move(s))
 {
 }
@@ -66,7 +72,7 @@ Json JsonParser::parse_json()
   }
 }
 
-Json JsonParser::parse_literal(const char* s, const Json& j)
+Json JsonParser::parse_literal(const char* s, Json&& j)
 {
   r.skipspace();
   r.expect(s);
@@ -76,7 +82,7 @@ Json JsonParser::parse_literal(const char* s, const Json& j)
 Json JsonParser::parse_number()
 {
 #define EXP_AND_SKIP_NUM                      \
-  REDBUD_THROW_PEX_IF(!Token::digit(r.now()),    \
+  REDBUD_THROW_PEX_IF(!Token::digit(r.now()), \
                    "digits 0 - 9",            \
                    std::to_string(r.now()),   \
                    r.getp());                 \
@@ -138,7 +144,7 @@ std::string JsonParser::parse_string()
     if (r.now() == '\"')
     {  // End of string.
       r.to(1);
-      return str;
+      return std::move(str);
     }
     else if (r.now() == '\\')
     {  // Escaped characters.
@@ -188,7 +194,7 @@ Json JsonParser::parse_array()
   Json::Array arr;
   if (r.match(']'))
   {
-    return arr;
+    return std::move(arr);
   }
 
   while (!r.eof())
@@ -198,7 +204,7 @@ Json JsonParser::parse_array()
     if (r.now() == ']')
     {
       r.to(1);
-      return arr;
+      return std::move(arr);
     }
     else if (r.now() == ',')
     {
@@ -228,7 +234,7 @@ Json JsonParser::parse_object()
   Json::Object obj;
   if (r.match('}'))
   {
-    return obj;
+    return std::move(obj);
   }
 
   while (!r.eof())
@@ -243,7 +249,7 @@ Json JsonParser::parse_object()
     if (r.now() == '}')
     {
       r.to(1);
-      return obj;
+      return std::move(obj);
     }
     else if (r.now() == ',')
     {
