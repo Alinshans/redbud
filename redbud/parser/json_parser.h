@@ -29,6 +29,7 @@ class JsonParser
   // Static function.
  public:
   static Json parse(const std::string& s);
+  static Json parse(std::string&& s);
 
   // --------------------------------------------------------------------------
   // Copy constructor.
@@ -42,7 +43,7 @@ class JsonParser
 
   // Parses the corresponding JSON type.
   Json        parse_json();
-  Json        parse_literal(const char* s, const Json& j);
+  Json        parse_literal(const char* s, Json&& j);
   Json        parse_number();
   std::string parse_string();
   Json        parse_array();
@@ -56,6 +57,7 @@ class JsonParser
   // Private member data.
  private:
   Reader r;
+
 };
 
 } // namespace json
