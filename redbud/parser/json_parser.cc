@@ -144,7 +144,7 @@ std::string JsonParser::parse_string()
     if (r.now() == '\"')
     {  // End of string.
       r.to(1);
-      return std::move(str);
+      return str;
     }
     else if (r.now() == '\\')
     {  // Escaped characters.
@@ -194,7 +194,7 @@ Json JsonParser::parse_array()
   Json::Array arr;
   if (r.match(']'))
   {
-    return std::move(arr);
+    return arr;
   }
 
   while (!r.eof())
@@ -204,7 +204,7 @@ Json JsonParser::parse_array()
     if (r.now() == ']')
     {
       r.to(1);
-      return std::move(arr);
+      return arr;
     }
     else if (r.now() == ',')
     {
@@ -234,22 +234,20 @@ Json JsonParser::parse_object()
   Json::Object obj;
   if (r.match('}'))
   {
-    return std::move(obj);
+    return obj;
   }
 
   while (!r.eof())
   {
-    auto key = std::move(parse_string());
+    auto key = parse_string();
     r.skipspace();
     r.expect(':');
-    auto val = parse_json();
-    auto it = obj.find(key);
-    obj[key] = std::move(val);
+    obj[key] = parse_json();
     r.skipspace();
     if (r.now() == '}')
     {
       r.to(1);
-      return std::move(obj);
+      return obj;
     }
     else if (r.now() == ',')
     {
@@ -275,7 +273,7 @@ void JsonParser::parse_hex4(uint32_t& u)
 {
   size_t p = r.getp();
   REDBUD_THROW_PEX_IF(!r.match("\\u"), "\\uXXXX", r.getsub(p, 6), p);
-  for (int32_t i = 0; i < 4; ++i, r.to(1))
+  for (int i = 0; i < 4; ++i, r.to(1))
   {
     REDBUD_THROW_PEX_IF(!Token::xdigit(r.now()), "\\uXXXX", r.getsub(p, 6), p);
     u <<= 4;

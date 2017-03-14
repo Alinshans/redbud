@@ -14,6 +14,11 @@ namespace redbud
 namespace redbud_bignumber
 {
 
+#if defined(REDBUD_MSVC)
+  #pragma warning(push)
+  #pragma warning(disable : 4267) // conversion from 'size_t' to 'type'
+#endif
+
 // ============================================================================
 // Macro definition.
 
@@ -264,7 +269,7 @@ BigInteger& BigInteger::operator*=(const BigInteger& multiplier)
 {
   if (is_zero() || multiplier.is_zero())
   {
-    *this = std::move(BigInteger(0));
+    *this = BigInteger(0);
     return *this;
   }
   bool result_neg = is_negative() ^ multiplier.is_negative();
@@ -293,11 +298,11 @@ BigInteger& BigInteger::operator/=(const BigInteger& divisor)
   int16_t comp = compare(divisor.absolute());
   if (is_zero() || comp < 0)
   {
-    *this = std::move(BigInteger(0));
+    *this = BigInteger(0);
   }
   else if (comp == 0)
   {
-    *this = std::move(BigInteger(1));
+    *this = BigInteger(1);
   }
   else
   {
@@ -760,7 +765,7 @@ BigInteger& BigInteger::_minus_with_pos(const BigInteger& subtrahend)
   int16_t cmp = larger.compare(smaller);
   if (cmp == 0)
   {
-    *this = std::move(BigInteger(0));
+    *this = BigInteger(0);
     return *this;
   }
   bool neg_symbol = false;
@@ -1143,6 +1148,10 @@ std::ostream& operator<<(std::ostream& os, const BigInteger& b)
 #undef NEGATIVE1
 #undef MAX_GROUPS
 #undef MAX_DIGITS
+
+#if defined(REDBUD_MSVC)
+  #pragma warning(pop)
+#endif
 
 } // namespace redbud_bignumber
 } // namespace redbud
