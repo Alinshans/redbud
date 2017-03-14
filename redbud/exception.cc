@@ -23,10 +23,9 @@ Exception::Exception(const std::string& cond,
                      const char* file,
                      size_t line)
 {
-  fprintf(stderr, "Exception : [ %s ], %s : %d\n"
+  fprintf(stderr, "Exception : [ %s ], %s : %zu\n"
           "     Note : %s\n",
           cond.c_str(), file, line, msg.c_str());
-  exit(1);
 }
 
 ParseException::ParseException(const std::string& cond,
@@ -36,10 +35,9 @@ ParseException::ParseException(const std::string& cond,
                                const char* file,
                                size_t line)
 {
-  fprintf(stderr, "Exception : [ %s ], %s : %d\n"
-          "   Expect : %s, Actual : %s at postion %d.\n",
+  fprintf(stderr, "Exception : [ %s ], %s : %zu\n"
+          "   Expect : %s, Actual : %s at postion %zu.\n",
           cond.c_str(), file, line, exp.c_str(), act.c_str(), pos);
-  exit(1);
 }
 
 } // namespace redbud

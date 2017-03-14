@@ -22,6 +22,9 @@
     <Filter Include="source\parser">
       <UniqueIdentifier>{18cdac20-8905-4226-a917-14d10312c819}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\test">
+      <UniqueIdentifier>{18ef8ca1-f911-436b-86ae-9c43cd730401}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="io\color.h">
@@ -74,8 +77,8 @@
     <ClCompile Include="parser\reader.cc">
       <Filter>source\parser</Filter>
     </ClCompile>
-    <ClCompile Include="test.cc">
-      <Filter>source</Filter>
+    <ClCompile Include="..\test\test.cc">
+      <Filter>source\test</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

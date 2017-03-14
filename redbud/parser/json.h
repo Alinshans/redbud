@@ -1,12 +1,12 @@
 // ============================================================================
 // Copyright (c) 2017 Alinshans. All rights reserved.
 // Licensed under the MIT License. See LICENSE for details.
-// 
-// Header File : redbud/parser/json.h 
+//
+// Header File : redbud/parser/json.h
 //
 // This file is used to deal with JSON (JavaScript Object Notation), specified
-// by RFC 7159 (which obsoletes RFC 4627) and by ECMA-404, including JSON 
-// encoder and decoder. see more on https://tools.ietf.org/html/rfc7159 and 
+// by RFC 7159 (which obsoletes RFC 4627) and by ECMA-404, including JSON
+// encoder and decoder. see more on https://tools.ietf.org/html/rfc7159 and
 // http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf .
 // ============================================================================
 
@@ -34,9 +34,12 @@ namespace json
 
 class JsonValue;
 
+// Uses it to control the return type of operator[] for an object type.
+#define JSON_OBJECT_USE_PROXY 0
+
 // ============================================================================
 // Json class
-// 
+//
 // This class is a JSON encoder and decoder, provides a series of interfaces
 // to parse, generate, modify and output a JSON. The type conversion table for
 // JSON and C++ is as follow:
@@ -55,9 +58,9 @@ class JsonValue;
 // Notes:
 //   1. The old version of JSON specified by the obsolete RFC 4627 required
 //      that the top-level value of a JSON text must be either a JSON object
-//      or array, and could not be a JSON null, boolean, number, or string 
+//      or array, and could not be a JSON null, boolean, number, or string
 //      value. RFC 7159 removed that restriction.
-//   2. Only supports UTF-8, please refer to the corresponding following 
+//   2. Only supports UTF-8, please refer to the corresponding following
 //      instructions below for specific serialization / deserialization.
 //   3. Not supports `NaN`, `Infinity` and `-Infinity` for number.
 //   4. The RFC specifies that the keys within a JSON object should be unique,
@@ -85,7 +88,7 @@ class JsonValue;
 //      { "key2", 2.3 }
 //    } },
 //  };
-//  
+//
 //  auto b = j2["bool"].as_bool();
 //  auto n = j2["number"].as_number();
 //  auto s = j2["string"].as_string();
@@ -95,7 +98,7 @@ class JsonValue;
 //    "\"str\":\"hello\",\"Unicode\":\"\\u0041\",\"obj\":{},"
 //    "\"level1\":{\"level2\":{\"level3\":{}}}}";
 //  Json j = Json::parse(json);
-// 
+//
 //  j.loads("[0,1.1,true,\"new\",[],{}]");
 //  auto str = j.dumps();
 //
@@ -127,6 +130,59 @@ class JsonValue;
 class Json
 {
 
+#if JSON_OBJECT_USE_PROXY
+
+  // --------------------------------------------------------------------------
+  // Proxy class is used for calling operator[] for an object type.
+  // When you use the proxy class, it can distinguish between read operation
+  // and write operation, and in the read operation will not pollute this Json.
+  // For example, if do not use proxy class, when you write:
+  //   Json json = {{"x",1}};
+  //   std::cout << json["z"] << "\n";  // Oh! you made a mistake carelessly!
+  //                                    // It should be "x"! What will happen?
+  // There is no such key "z", so it automatically creates one which has a key
+  // of "z" and a value of Json(), i.e., this Json is changed! Now calls
+  // `json.print();` you will see `{"x":1,"z":}`, oh! It is not what you want.
+  // Ok, the proxy class is to solve this problem, so if runs the code above,
+  // it will yield an exception for no such key. Is that solved perfectly?
+  // No, it broughts some other trouble. (1) When you want to operator the
+  // return value like a Json before, you have to make a explicit conversion:
+  //   Json json = {{"x",1}};
+  //   auto num = static_cast<Json>(json["x"]).as_number();
+  // (2) Some operation may not work, i.g., std::swap. you can not write:
+  //   Json json = { {"a",{{"b",1}}}, {"c",2} }
+  //   std::swap(json["a"]["b"], json["c"]);    // error
+  // You can choose whether to use the proxy class by adjusting the macro 
+  // `JSON_OBJECT_USE_PROXY` above, `1` for to use, `0` for not to use.
+ private:
+
+  class JsonProxy
+  {
+   public:
+    JsonProxy(const JsonProxy&) = default;
+    JsonProxy(JsonProxy&&) = default;
+
+    JsonProxy(Json& j, const std::string& k);
+    
+    // Overloads operators.
+    JsonProxy& operator=(const JsonProxy&) = delete;
+    JsonProxy& operator=(const Json& rhs);  // For lvalue.
+    JsonProxy& operator=(Json&& rhs);       // For lvalue.
+
+    operator Json() const;                  // For rvalue.
+
+    JsonProxy operator[](const std::string& key);
+
+    Json* operator&();
+    const Json* operator&() const;
+
+   private:
+    Json& j_;
+    const std::string& key_;
+  };
+
+#endif
+
   // --------------------------------------------------------------------------
   // Enum constants, friend class and using declarations.
  public:
@@ -153,15 +209,12 @@ class Json
   };
 
   // Alias declarations.
-  using Object = std::map<std::string, Json>;
-  using Array  = std::vector<Json>;
-
-  friend class JsonValue;
-
-  // Alias declarations for value of JSON array and JSON object.
- private:
+  using Object      = std::map<std::string, Json>;
+  using Array       = std::vector<Json>;
   using ArrayValue  = Array::value_type;
   using ObjectValue = Object::value_type;
+
+  friend class JsonValue;
 
   // --------------------------------------------------------------------------
   // Static data member, for empty JSON value, empty JSON array and empty
@@ -225,7 +278,7 @@ class Json
   Json(Json&&);
 
   // Deletes all constructors with a raw pointer. Because the JsonValue
-  // is stored in a std::shared_ptr, and passes a raw pointer to a 
+  // is stored in a std::shared_ptr, and passes a raw pointer to a
   // std::shared_ptr constructor is no a good idea.
   template <typename T>
   Json(T*) = delete;
@@ -300,10 +353,10 @@ class Json
   //      }}
   //    };
   Json(std::initializer_list<Json> ilist);
-  
+
   // The same as the previous one.
   Json& operator=(std::initializer_list<Json> ilist);
-  
+
   // --------------------------------------------------------------------------
 
  public:
@@ -312,7 +365,7 @@ class Json
   Type type() const;
 
   // True if this type is the corresponding Json::Type.
-  // Notes that, is_null() means that the jsonValue is null, 
+  // Notes that, is_null() means that the jsonValue is null,
   // which is different from a null JSON.
   bool is_null()   const;
   bool is_bool()   const;
@@ -331,14 +384,23 @@ class Json
 
   // Gets or sets JsonValue of this Json, this type must be a JSON array,
   // otherwise, an exception will be thrown.
-  Json& operator[](size_t i);
+  Json&       operator[](size_t i);
   const Json& operator[](size_t i) const;
 
   // Gets or sets JsonValue of this Json, this type must be a JSON object,
   // otherwise, an exception will be thrown. the keys of the JSON object
   // should be unique, so the repeated keys will be overwritten.
-  Json& operator[](const std::string& key);
+  // 
+  // These two functions have two versions, see `Proxy class` for details.
+#if JSON_OBJECT_USE_PROXY
+  JsonProxy       operator[](const std::string& key);
+  const JsonProxy operator[](const std::string& key) const;
+#else
+  Json&       operator[](const std::string& key);
   const Json& operator[](const std::string& key) const;
+#endif // JSON_OBJECT_USE_PROXY
+
+  
 
   // Return value correspondence table:
   // Json type      return value
@@ -354,20 +416,22 @@ class Json
   bool empty() const;
 
   // Inserts a Json value, only for JSON array.
-  void push_back(ArrayValue&& e);
+  void push_back(const ArrayValue& element);
+  void push_back(ArrayValue&& element);
 
   // Pops up the last JsonValue in this Json, only for JSON array.
   void pop_back();
 
   // Inserts a key-value pair, only for JSON object.
-  void insert(ObjectValue&& p);
+  void insert(const ObjectValue& pair);
+  void insert(ObjectValue&& pair);
 
   // Deletes the Json value at subscript i of the JSON array.
   void erase(size_t i);
 
   // Deletes the key-value pair of the JSON object.
   void erase(const std::string& key);
-  
+
   // After calling this function, this Json will become:
   // Json type       after clear
   // null     --->      null
@@ -394,9 +458,10 @@ class Json
   std::string dumps() const;
 
   // Passes in a string, and saves the parsed result in this Json.
+  void loads(const std::string& str);
   void loads(std::string&& str);
 
-  // Output this Json text, the first parameter can be set to the 
+  // Output this Json text, the first parameter can be set to the
   // output format(the default is PrintType::Compact), and the second
   // parameter can be set to the _indentation(the default is 4).
   // If the PrintType is Compact, the second parameter will be ignored.
@@ -407,7 +472,7 @@ class Json
   //     {{ "you says","world" }},
   //     { "list",nullptr,true,1 }
   //   };
-  //   j.print();  
+  //   j.print();
   //   //[{"I say":"hello"},{"you says":"world"},["list",null,true,1]]
   //   j.print(Json::PrintType::Pretty, 2);
   //   //[
@@ -454,10 +519,10 @@ class Json
 
   // JsonValue node.
   std::shared_ptr<JsonValue> node_;
+
 };
 
 } // namespace json
 } // namespace parser
 } // namespace redbud
 #endif // !ALINSHANS_REDBUD_PARSER_JSON_H_
-

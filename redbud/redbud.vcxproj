@@ -159,12 +159,12 @@
     <ClInclude Include="platform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\test\test.cc" />
     <ClCompile Include="bignumber.cc" />
     <ClCompile Include="exception.cc" />
     <ClCompile Include="parser\json.cc" />
     <ClCompile Include="parser\json_parser.cc" />
     <ClCompile Include="parser\reader.cc" />
-    <ClCompile Include="test.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

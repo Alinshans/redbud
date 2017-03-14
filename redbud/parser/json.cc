@@ -15,6 +15,7 @@
 #include "json_parser.h"
 #include "tokenizer.h"
 #include "../exception.h"
+#include "../platform.h"
 
 namespace redbud
 {
@@ -22,6 +23,11 @@ namespace parser
 {
 namespace json
 {
+
+#if defined(REDBUD_MSVC)
+  #pragma warning(push)
+  #pragma warning(disable : 6031) // return value ignored
+#endif
 
 // ============================================================================
 // Macro definition.
@@ -49,6 +55,15 @@ namespace json
 // ============================================================================
 // Base class : JsonValue
 
+// 
+namespace
+{
+
+struct rvalue {};
+struct lvalue {};
+
+}
+
 class JsonValue
 {
 
@@ -61,32 +76,35 @@ class JsonValue
   static const Json::Array&   get_array_instance();
   static const Json::Object&  get_object_instance();
 
-  virtual Json::Type          type() const = 0;
-  virtual size_t              size() const = 0;
+  // Pure virtual functions.
+  virtual Json::Type  type() const = 0;
+  virtual size_t      size() const = 0;
+  virtual void        clear() = 0;
 
   // Gets Json from JsonArray.
-  virtual Json&               get_value_safe(size_t i);
-  virtual const Json&         get_value_safe(size_t i) const;
+  Json&               get_value_from_arr(size_t i);
+  const Json&         get_value_from_arr(size_t i) const;
 
   // Gets Json from JsonObject.
-  virtual Json&               get_value_safe(const std::string& key);
-  virtual const Json&         get_value_safe(const std::string& key) const;
+  Json&               get_value_from_obj(const std::string& key, lvalue);
+  const Json&         get_value_from_obj(const std::string& key, rvalue) const;
 
   // If the types does not match, the corresponding instance
   // will be returned.
-  virtual bool                get_bool_safe() const;
-  virtual double              get_number_safe() const;
-  virtual const std::string&  get_string_safe() const;
-  virtual const Json::Array&  get_array_safe() const;
-  virtual const Json::Object& get_object_safe() const;
+  bool                get_bool_safe()   const;
+  double              get_number_safe() const;
+  const std::string&  get_string_safe() const;
+  const Json::Array&  get_array_safe()  const;
+  const Json::Object& get_object_safe() const;
 
   // STL-like access.
-  virtual void                push_back(Json::ArrayValue&& e);
-  virtual void                pop_back();
-  virtual void                insert(Json::ObjectValue&& p);
-  virtual void                erase(size_t i);
-  virtual void                erase(const std::string& key);
-  virtual void                clear() = 0;
+  template <typename T>
+  void push_back(T&& e);
+  void pop_back();
+  void insert(const Json::ObjectValue& p);
+  void insert(Json::ObjectValue&& p);
+  void erase(size_t i);
+  void erase(const std::string& key);
 
 };
 
@@ -274,25 +292,25 @@ const Json::Object& JsonValue::get_object_instance()
 // ----------------------------------------------------------------------------
 // Member functions.
 
-Json& JsonValue::get_value_safe(size_t index)
+Json& JsonValue::get_value_from_arr(size_t index)
 {
   auto& arr = static_cast<JsonArray&>(*this).value_;
   return arr[index];
 }
 
-const Json& JsonValue::get_value_safe(size_t index) const
+const Json& JsonValue::get_value_from_arr(size_t index) const
 {
-  auto arr = static_cast<const JsonArray&>(*this).value_;
+  const auto& arr = static_cast<const JsonArray&>(*this).value_;
   return arr[index];
 }
 
-Json& JsonValue::get_value_safe(const std::string& key)
+Json& JsonValue::get_value_from_obj(const std::string& key, lvalue)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   return obj[key];
 }
 
-const Json& JsonValue::get_value_safe(const std::string& key) const
+const Json& JsonValue::get_value_from_obj(const std::string& key, rvalue) const
 {
   const auto& obj = static_cast<const JsonObject&>(*this).value_;
   const auto& key_pos = obj.find(key);
@@ -325,10 +343,11 @@ const Json::Object& JsonValue::get_object_safe() const
   return static_cast<const JsonObject&>(*this).value_;
 }
 
-void JsonValue::push_back(Json::ArrayValue&& e)
+template <typename T>
+void JsonValue::push_back(T&& e)
 {
   auto& arr = static_cast<JsonArray&>(*this).value_;
-  arr.push_back(std::forward<Json::ArrayValue&&>(e));
+  arr.push_back(std::forward<T>(e));
 }
 
 void JsonValue::pop_back()
@@ -337,15 +356,25 @@ void JsonValue::pop_back()
   arr.pop_back();
 }
 
-void JsonValue::insert(Json::ObjectValue&& p)
+void JsonValue::insert(const Json::ObjectValue& p)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   obj[p.first] = p.second;
 }
 
+void JsonValue::insert(Json::ObjectValue&& p)
+{
+  auto& obj = static_cast<JsonObject&>(*this).value_;
+  obj[p.first] = std::move(p.second);
+}
+
 void JsonValue::erase(size_t i)
 {
   auto& arr = static_cast<JsonArray&>(*this).value_;
+  if (arr.size() <= i)
+  {
+    return;
+  }
   arr.erase(arr.begin() + i);
 }
 
@@ -587,31 +616,54 @@ Json& Json::operator[](size_t index)
 {
   EXPECT_ARRAY;
   REDBUD_THROW_EX_IF(size() <= index, "Json index out of range.");
-  return node_.get()->get_value_safe(index);
+  return node_.get()->get_value_from_arr(index);
 }
 
 const Json& Json::operator[](size_t index) const
 {
   EXPECT_ARRAY;
   REDBUD_THROW_EX_IF(size() <= index, "Json index out of range.");
-  return node_.get()->get_value_safe(index);
+  return node_.get()->get_value_from_arr(index);
 }
 
-Json& Json::operator[](const std::string& key)
+#if JSON_OBJECT_USE_PROXY
+
+Json::JsonProxy Json::operator[](const std::string& key)
 {
   if (type() == Type::kNull)
   {
     *this = null_object;
   }
   EXPECT_OBJECT;
-  return node_.get()->get_value_safe(key);
+  return JsonProxy(*this, key);
+}
+
+const Json::JsonProxy Json::operator[](const std::string& key) const
+{
+  EXPECT_OBJECT;
+  return JsonProxy(const_cast<Json&>(*this), key);
+}
+
+#else
+
+Json& Json::operator[](const std::string& key)
+{
+  if (type() == Type::kNull)
+  {
+    *this = null_object;
+    return node_.get()->get_value_from_obj(key, lvalue{});
+  }
+  EXPECT_OBJECT;
+  return node_.get()->get_value_from_obj(key, lvalue{});
 }
 
 const Json& Json::operator[](const std::string& key) const
 {
   EXPECT_OBJECT;
-  return node_.get()->get_value_safe(key);
+  return node_.get()->get_value_from_obj(key, rvalue{});
 }
+
+#endif // JSON_OBJECT_USE_PROXY
 
 // ----------------------------------------------------------------------------
 // STL-like access.
@@ -630,16 +682,28 @@ bool Json::empty() const
   return size() == 0;
 }
 
-void Json::push_back(ArrayValue&& e)
+void Json::push_back(const ArrayValue& element)
 {
   if (type() == Type::kNull)
   {
     *this = null_array;
-    node_.get()->push_back(std::forward<ArrayValue>(e));
+    node_.get()->push_back(element);
     return;
   }
   EXPECT_ARRAY;
-  node_.get()->push_back(std::forward<ArrayValue>(e));
+  node_.get()->push_back(element);
+}
+
+void Json::push_back(ArrayValue&& element)
+{
+  if (type() == Type::kNull)
+  {
+    *this = null_array;
+    node_.get()->push_back(std::move(element));
+    return;
+  }
+  EXPECT_ARRAY;
+  node_.get()->push_back(std::move(element));
 }
 
 void Json::pop_back()
@@ -649,22 +713,33 @@ void Json::pop_back()
   node_.get()->pop_back();
 }
 
-void Json::insert(ObjectValue&& p)
+void Json::insert(const ObjectValue& pair)
 {
   if (type() == Type::kNull)
   {
     *this = null_object;
-    node_.get()->insert(std::forward<ObjectValue>(p));
+    node_.get()->insert(pair);
     return;
   }
   EXPECT_OBJECT;
-  node_.get()->insert(std::forward<ObjectValue>(p));
+  node_.get()->insert(pair);
+}
+
+void Json::insert(ObjectValue&& pair)
+{
+  if (type() == Type::kNull)
+  {
+    *this = null_object;
+    node_.get()->insert(std::move(pair));
+    return;
+  }
+  EXPECT_OBJECT;
+  node_.get()->insert(std::move(pair));
 }
 
 void Json::erase(size_t i)
 {
   EXPECT_ARRAY;
-  REDBUD_THROW_EX_IF(size() <= i, "Json index out of range.");
   node_.get()->erase(i);
 }
 
@@ -700,9 +775,14 @@ std::string Json::dumps() const
   return str;
 }
 
+void Json::loads(const std::string & str)
+{
+  *this = JsonParser::parse(str);
+}
+
 void Json::loads(std::string&& str)
 {
-  *this = JsonParser::parse(std::forward<std::string>(str));
+  *this = JsonParser::parse(std::move(str));
 }
 
 // ----------------------------------------------------------------------------
@@ -988,11 +1068,60 @@ std::istream& operator >> (std::istream& is, Json& j)
   return is;
 }
 
+#if JSON_OBJECT_USE_PROXY
+
+// ============================================================================
+// Proxy class.
+
+Json::JsonProxy::JsonProxy(Json& n, const std::string& key)
+  :j_(n), key_(key)
+{
+}
+
+Json::JsonProxy& Json::JsonProxy::operator=(const Json& rhs)
+{
+  j_.node_.get()->get_value_from_obj(key_, lvalue{}) = rhs;
+  return *this;
+}
+
+Json::JsonProxy& Json::JsonProxy::operator=(Json&& rhs)
+{
+  j_.node_.get()->get_value_from_obj(key_, lvalue{}) = rhs;
+  return *this;
+}
+
+Json::JsonProxy::operator Json() const
+{
+  return j_.node_.get()->get_value_from_obj(key_, rvalue{});
+}
+
+Json::JsonProxy Json::JsonProxy::operator[](const std::string& key)
+{
+  return j_.node_.get()->get_value_from_obj(key_, lvalue{})[key];
+}
+
+Json* Json::JsonProxy::operator&()
+{
+  return &(j_.node_.get()->get_value_from_obj(key_, lvalue{}));
+}
+
+const Json* Json::JsonProxy::operator&() const
+{
+  return &(j_.node_.get()->get_value_from_obj(key_, rvalue{}));
+}
+
+#endif // JSON_OBJECT_USE_PROXY
+
+
 #undef EXPECT_BOOL
 #undef EXPECT_NUMBER
 #undef EXPECT_STRING
 #undef EXPECT_ARRAY
 #undef EXPECT_OBJECT
+
+#if defined(REDBUD_MSVC)
+  #pragma warning(pop)
+#endif
 
 } // namespace json
 } // namespace parser

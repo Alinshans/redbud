@@ -25,14 +25,14 @@
 namespace redbud
 {
 
-#if defined(REDBUD_MSVC)
-  #pragma warning(push)
-  #pragma warning(disable : 4804) // unsafe use of type 'bool' in operation
-#endif
-
 // Avoid name conflicts.
 namespace redbud_bignumber
 {
+
+#if defined(REDBUD_MSVC)
+  #pragma warning(push)
+  #pragma warning(disable : 4267) // conversion from 'size_t' to 'type'
+#endif
 
 // ============================================================================
 // Enum constants definition.
