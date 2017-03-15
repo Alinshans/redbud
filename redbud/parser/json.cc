@@ -55,10 +55,11 @@ namespace json
 // ============================================================================
 // Base class : JsonValue
 
-// 
+// anonymous namespace
 namespace
 {
 
+// Distinguishs between lvalue and rvalue.
 struct rvalue {};
 struct lvalue {};
 

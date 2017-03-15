@@ -12,9 +12,11 @@
 
 #include <stdint.h>
 
-#include <cstring> // strlen
-#include <string>  // string, to_string
-#include <limits>  // numeric_limits
+#include <cstring>     // strlen
+#include <string>      // string, to_string
+#include <limits>      // numeric_limits
+#include <utility>     // forward
+#include <type_traits> // enable_if, is_arithmetic, is_same
 
 namespace redbud
 {
@@ -35,7 +37,7 @@ namespace redbud
 //  float       -> maximum  6-bit precision string numbers
 //  double      -> maximum 15-bit precision string numbers
 //  long double -> maximum 15-bit precision string numbers
-//  char        -> 1-bit string
+//  char        -> string
 //  char*       -> string
 //  char[]      -> string
 //  string      -> string
@@ -43,89 +45,62 @@ namespace redbud
 // ----------------------------------------------------------------------------
 
 // Unknown type.
-template <typename T>
-inline std::string ToString(T value)
+template <typename T, typename = typename std::enable_if<
+  !std::is_arithmetic<T>::value, T>::type>
+inline std::string ToString(T&& value)
 {
   return "[?]";
 }
 
 // For std::string.
-template <>
 inline std::string ToString(const std::string& s)
 {
   return s;
 }
 
 // For const char*.
-template <>
 inline std::string ToString(const char* s)
 {
   return std::string(s);
 }
 
 // For char[].
-template <>
 inline std::string ToString(char s[])
 {
   return std::string(s, s + strlen(s));
 }
 
 // For char / signed char / unsigned char.
-template <>
 inline std::string ToString(char c)
 {
   return std::string(1, c);
 }
-template <>
+
 inline std::string ToString(signed char c)
 {
   return std::string(1, c);
 }
-template <>
+
 inline std::string ToString(unsigned char c)
 {
   return std::string(1, c);
 }
 
 // For bool type.
-template <>
 inline std::string ToString(bool x)
 {
   return x ? std::string("true") : std::string("false");
 }
 
-// For integral type.
-template <>
-inline std::string ToString(int32_t n)
+// For integral type / floating type.
+template <typename T, typename = typename std::enable_if<
+  std::is_arithmetic<T>::value &&
+  !std::is_same<wchar_t, T>::value &&
+  !std::is_same<char16_t, T>::value &&
+  !std::is_same<char32_t, T>::value, T>::type>
+inline std::string ToString(T n)
 {
   return std::to_string(n);
-}
-template <>
-inline std::string ToString(uint32_t n)
-{
-  return std::to_string(n);
-}
-template <>
-inline std::string ToString(int64_t n)
-{
-  return std::to_string(n);
-}
-template <>
-inline std::string ToString(uint64_t n)
-{
-  return std::to_string(n);
-}
-
-// For float / double
-template <>
-inline std::string ToString(float x)
-{
-  return std::to_string(x);
-}
-template <>
-inline std::string ToString(double x)
-{
-  return std::to_string(x);
 }
 
 // ----------------------------------------------------------------------------
@@ -139,19 +114,20 @@ inline std::string ToString(double x)
 // ----------------------------------------------------------------------------
 inline std::string SpliceString()
 {
-  return "";
+  return std::string{};
 }
 
-template <typename Arg1>
-inline std::string SpliceString(Arg1 str)
+template <typename First>
+inline std::string SpliceString(First&& str)
 {
-  return ToString(str);
+  return ToString(std::forward<First>(str));
 }
 
-template <typename Arg, typename ...Args>
-std::string SpliceString(Arg str, Args ...args)
+template <typename First, typename ...Args>
+std::string SpliceString(First&& str, Args&& ...args)
 {
-  return ToString(str) + SpliceString(args...);
+  return ToString(std::forward<First>(str)) + 
+         SpliceString(std::forward<Args>(args)...);
 }
 
 // ============================================================================
@@ -174,8 +150,8 @@ std::string SpliceString(Arg str, Args ...args)
 template <typename Target, typename Origin>
 Target integer_cast_safe(Origin value)
 {
-  static_assert(std::numeric_limits<Origin>::is_integer &&
-                std::numeric_limits<Target>::is_integer, 
+  static_assert(std::is_integral<Target>::value &&
+                std::is_integral<Origin>::value, 
                 "Integer type required");
   if (std::numeric_limits<Origin>::digits > 
       std::numeric_limits<Target>::digits)
@@ -185,14 +161,14 @@ Target integer_cast_safe(Origin value)
     {
       return std::numeric_limits<Target>::max();
     }
-    if (std::numeric_limits<Origin>::is_signed &&
+    if (std::is_signed<Origin>::value &&
         value < static_cast<Origin>(std::numeric_limits<Target>::min()))
     {
       return std::numeric_limits<Target>::min();
     }
     return static_cast<Target>(value);
   }
-  else if (!std::numeric_limits<Target>::is_signed && value < 0)
+  else if (std::is_unsigned<Target>::value && value < 0)
   {
     return 0;
   }
@@ -211,10 +187,8 @@ Target integer_cast_safe(Origin value)
 template <typename Target, typename Origin>
 Target float_cast_safe(Origin value)
 {
-  static_assert(std::numeric_limits<Origin>::is_specialized &&
-                std::numeric_limits<Target>::is_specialized &&
-                !std::numeric_limits<Origin>::is_integer &&
-                !std::numeric_limits<Target>::is_integer,
+  static_assert(std::is_floating_point<Target>::value &&
+                std::is_floating_point<Origin>::value,
                 "Float type required");
   if (std::numeric_limits<Origin>::digits > 
       std::numeric_limits<Target>::digits)
