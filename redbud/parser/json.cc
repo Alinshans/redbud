@@ -10,7 +10,10 @@
 
 #include "json.h"
 
+#include <cstdio>
+
 #include <algorithm>
+#include <iosfwd>
 
 #include "json_parser.h"
 #include "tokenizer.h"
@@ -125,9 +128,6 @@ class JsonNull : public JsonValue
   size_t     size() const override { return 1; }
   void       clear()      override {}
 
-  // Implicit conversion.
-  operator nullptr_t() { return nullptr; }
-
 };
 
 class JsonBool : public JsonValue
@@ -146,9 +146,6 @@ class JsonBool : public JsonValue
   Json::Type type() const override { return Json::Type::kJsonBool; }
   size_t     size() const override { return 1; }
   void       clear()      override { value_ = false; }
-
-  // Implicit conversion.
-  operator bool() { return value_; }
 
  private:
   bool value_;
@@ -176,9 +173,6 @@ class JsonNumber : public JsonValue
   size_t     size() const override { return 1; }
   void       clear()      override { value_ = 0.0; }
 
-  // Implicit conversion.
-  operator double() { return value_; }
-
  private:
   double value_;
 
@@ -202,9 +196,6 @@ class JsonString : public JsonValue
   Json::Type type() const override { return Json::Type::kJsonString; }
   size_t     size() const override { return 1; }
   void       clear()      override { value_.clear(); }
-
-  // Implicit conversion.
-  operator std::string() { return value_; }
 
  private:
   std::string value_;
@@ -233,9 +224,6 @@ class JsonArray : public JsonValue
   size_t     size() const override { return value_.size(); }
   void       clear()      override { value_.clear(); }
 
-  // Implicit conversion.
-  operator Json::Array() { return value_; }
-
  private:
   Json::Array value_;
 
@@ -263,9 +251,6 @@ class JsonObject : public JsonValue
   Json::Type type() const override { return Json::Type::kJsonObject; }
   size_t     size() const override { return value_.size(); }
   void       clear() override { value_.clear(); }
-
-  // Implicit conversion.
-  operator Json::Object() { return value_; }
 
  private:
   Json::Object value_;
@@ -415,7 +400,7 @@ Json::Json()
 {
 }
 
-Json::Json(nullptr_t)
+Json::Json(std::nullptr_t)
   :node_(std::make_shared<JsonNull>())
 {
 }
@@ -1063,9 +1048,9 @@ std::ostream& operator<<(std::ostream& os, const Json& j)
 
 std::istream& operator >> (std::istream& is, Json& j)
 {
-  char buf[4096];
-  is.getline(buf,sizeof(buf));
-  j = strlen(buf) == 0 ? Json::null_json : Json::parse(buf);
+  std::string json_buf;
+  std::getline(is, json_buf);
+  j = Json::parse(json_buf);
   return is;
 }
 
