@@ -400,8 +400,6 @@ class Json
   const Json& operator[](const std::string& key) const;
 #endif // JSON_OBJECT_USE_PROXY
 
-  
-
   // Return value correspondence table:
   // Json type      return value
   // null     --->        1

@@ -18,7 +18,6 @@
   #include <cstring>   // strstr
 #elif defined(REDBUD_WIN)
   #include <Windows.h>
-  #include <VersionHelpers.h>
   #include <io.h>
 #endif
 
@@ -125,48 +124,48 @@ namespace details
 {
 
 // Manages associated stream buffer.
-inline const std::streambuf*& GetCoutBuf()
+inline const std::streambuf*& get_coutbuf()
 {
-  static const std::streambuf* out_p = std::cout.rdbuf();
-  return out_p;
+  static const std::streambuf* pout = std::cout.rdbuf();
+  return pout;
 }
 
-inline const std::streambuf*& GetCerrBuf()
+inline const std::streambuf*& get_cerrbuf()
 {
-  static const std::streambuf* err_p = std::cerr.rdbuf();
-  return err_p;
+  static const std::streambuf* perr = std::cerr.rdbuf();
+  return perr;
 }
 
-inline const std::streambuf*& GetClogBuf()
+inline const std::streambuf*& get_clogbuf()
 {
-  static const std::streambuf* log_p = std::clog.rdbuf();
-  return log_p;
+  static const std::streambuf* plog = std::clog.rdbuf();
+  return plog;
 }
 
 // Gets an unique integer to use as index to iword()
-inline int GetIword()
+inline int get_iword()
 {
   static int i = std::ios_base::xalloc();
   return i;
 }
 
 // Determines whether the terminal color of this system can be modified.
-inline bool IsMutable()
+inline bool is_mutable()
 {
 #if defined(REDBUD_LINUX) || defined(REDBUD_OSX)
-  static constexpr const char* Terms[] = {
+  static constexpr const char* terms[] = {
     "ansi", "color", "console", "cygwin", "gnome", "konsole", "kterm",
     "linux", "msys", "putty", "rxvt", "screen", "vt100", "xterm"
   };
-  const char *env_p = std::getenv("TERM");
-  if (env_p == nullptr)
+  const char *penv = std::getenv("TERM");
+  if (penv == nullptr)
   {
     return false;
   }
   bool result = false;
-  for (const auto& t : Terms)
+  for (const auto& t : terms)
   {
-    if (std::strstr(env_p, t) != nullptr)
+    if (std::strstr(penv, t) != nullptr)
     {
       result = true;
       break;
@@ -180,9 +179,9 @@ inline bool IsMutable()
 }
 
 /// Determines whether the buffer stream reaches the end.
-inline bool IsTerminal(const std::streambuf* buf)
+inline bool is_terminal(const std::streambuf* buf)
 {
-  if (buf == GetCoutBuf())
+  if (buf == get_coutbuf())
   {
 #if defined(REDBUD_LINUX) || defined(REDBUD_OSX)
     return isatty(fileno(stdout)) ? true : false;
@@ -190,7 +189,8 @@ inline bool IsTerminal(const std::streambuf* buf)
     return _isatty(_fileno(stdout)) ? true : false;
 #endif
   }
-  if (buf == GetCerrBuf() || buf == GetClogBuf())
+
+  if (buf == get_cerrbuf() || buf == get_clogbuf())
   {
 #if defined(REDBUD_LINUX) || defined(REDBUD_OSX)
     return isatty(fileno(stderr)) ? true : false;
@@ -219,7 +219,7 @@ using state_return_t = typename std::enable_if<
 // Sets the format and color of the text.
 #if defined(REDBUD_LINUX) || defined(REDBUD_OSX)
 template <typename T>
-inline color_return_t<T> SetColor(std::ostream& os, const T& value)
+inline color_return_t<T> set_color(std::ostream& os, const T& value)
 {
   return os << "\033[" << static_cast<int>(value) << "m";
 }
@@ -231,14 +231,14 @@ static constexpr WORD default_state = (FOREGROUND_BLUE |
                                        FOREGROUND_RED);
 
 // Gets the corresponding RGB value on Windows.
-inline WORD GetWinRGB(WORD rgb)
+inline WORD get_rgb(WORD rgb)
 {
   static constexpr WORD cor[8] = { 0, 4, 2, 6, 1, 5, 3, 7 };
   return cor[rgb];
 }
 
 // Sets font attributes on Windows.
-inline void SetWinAttributes(redbud::io::fg color, WORD& state)
+inline void set_attributes(redbud::io::fg color, WORD& state)
 {
   if (color == redbud::io::fg::reserve)
   {
@@ -250,10 +250,10 @@ inline void SetWinAttributes(redbud::io::fg color, WORD& state)
     state |= default_state;
     return;
   }
-  state |= GetWinRGB(static_cast<WORD>(color) - 30);
+  state |= get_rgb(static_cast<WORD>(color) - 30);
 }
 
-inline void SetWinAttributes(redbud::io::bg color, WORD& state)
+inline void set_attributes(redbud::io::bg color, WORD& state)
 {
   if (color == redbud::io::bg::reserve)
   {
@@ -264,24 +264,24 @@ inline void SetWinAttributes(redbud::io::bg color, WORD& state)
   {
     return;
   }
-  state |= GetWinRGB(static_cast<WORD>(color) - 40) << 4;
+  state |= get_rgb(static_cast<WORD>(color) - 40) << 4;
 }
 
-inline void SetWinAttributes(redbud::io::hfg color, WORD& state)
+inline void set_attributes(redbud::io::hfg color, WORD& state)
 {
   state &= 0xFFF0;
   state |= (static_cast<WORD>(0x8) | 
-            GetWinRGB(static_cast<WORD>(color) - 90));
+            get_rgb(static_cast<WORD>(color) - 90));
 }
 
-inline void SetWinAttributes(redbud::io::hbg color, WORD& state)
+inline void set_attributes(redbud::io::hbg color, WORD& state)
 {
   state &= 0xFF0F;
   state |= (static_cast<WORD>(0x80) | 
-            GetWinRGB(static_cast<WORD>(color) - 100) << 4);
+            get_rgb(static_cast<WORD>(color) - 100) << 4);
 }
 
-inline void SetWinAttributes(redbud::io::format format, WORD& state)
+inline void set_attributes(redbud::io::format format, WORD& state)
 {
   if (format == redbud::io::format::reset)
   {
@@ -295,19 +295,19 @@ inline WORD& current_state()
   return state;
 }
 
-inline HANDLE GetConsoleHandle()
+inline HANDLE get_console_handle()
 {
   static HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
   return h;
 }
 
 template <typename T>
-inline color_return_t<T> SetColor(std::ostream& os, const T& value)
+inline color_return_t<T> set_color(std::ostream& os, const T& value)
 {
-  HANDLE h = GetConsoleHandle();
-  if (h && IsTerminal(os.rdbuf()))
+  HANDLE h = get_console_handle();
+  if (h && is_terminal(os.rdbuf()))
   {
-    SetWinAttributes(value, current_state());
+    set_attributes(value, current_state());
     SetConsoleTextAttribute(h, current_state());
     return os;
   }
@@ -325,10 +325,10 @@ inline details::color_return_t<T>
 operator<<(std::ostream& os, const T& value)
 {
   const std::streambuf* buf = os.rdbuf();
-  return (os.iword(details::GetIword()) ||
-          details::IsMutable() &&
-          details::IsTerminal(os.rdbuf()))
-    ? details::SetColor(os, value)
+  return (os.iword(details::get_iword()) ||
+          details::is_mutable() &&
+          details::is_terminal(os.rdbuf()))
+    ? details::set_color(os, value)
     : os;
 }
 
@@ -338,11 +338,11 @@ operator<<(std::ostream& os, const T& value)
 {
   if (value == redbud::io::state::automatic)
   {
-    os.iword(details::GetIword()) = 0;
+    os.iword(details::get_iword()) = 0;
   }
   else if (value == redbud::io::state::manual)
   {
-    os.iword(details::GetIword()) = 1;
+    os.iword(details::get_iword()) = 1;
   }
   return os;
 }
