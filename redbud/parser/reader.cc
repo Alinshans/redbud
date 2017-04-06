@@ -9,6 +9,8 @@
 
 #include "reader.h"
 
+#include <cstring>
+
 #include <fstream>
 
 #include "tokenizer.h"
@@ -22,7 +24,7 @@ namespace parser
 // ----------------------------------------------------------------------------
 // Copy Constructors.
 
-Reader::Reader(const char * sz)
+Reader::Reader(const char* sz)
   :context_(sz), p_(0)
 {
 }
@@ -110,7 +112,7 @@ void Reader::skip(char ch)
 
 void Reader::skip(const char* sz)
 {
-  size_t len = strlen(sz);
+  size_t len = std::strlen(sz);
   size_t pz = 0;
   for (size_t p = p_; pz < len; ++p, ++pz)
   {

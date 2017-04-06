@@ -1049,7 +1049,7 @@ std::ostream& operator<<(std::ostream& os, const Json& j)
 std::istream& operator >> (std::istream& is, Json& j)
 {
   std::string json_buf;
-  std::getline(is, json_buf);
+  std::getline(is, json_buf, '\n');
   j = Json::parse(json_buf);
   return is;
 }
