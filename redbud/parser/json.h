@@ -217,20 +217,8 @@ class Json
   friend class JsonValue;
 
   // --------------------------------------------------------------------------
-  // Static data member, for empty JSON value, empty JSON array and empty
-  // JSON object, you can initialize a JSON value like:
-  //   Json j1 = Json::null_array;
-  //   Json j2 = Json::null_object;
-  // Notes that, if a JSON is a null_json, it can be converted to a JSON
-  // array or a JSON object in the next operation, e.g.:
-  //   Json j;
-  //   j.push_back(0);  // push_back operation just for JSON array,
-  //                    // so the j become a JSON array.
-  //   j["key"] = 1;    // error! j is a JSON array.
+  // Static functions.
  public:
-  static Json null_json;
-  static Json null_array;
-  static Json null_object;
 
   // Decodes from a string, follows the rules of RFC 7159 and ECMA-404.
   // if parses failed, it will yield an exception.
@@ -247,6 +235,12 @@ class Json
 
   // Default constructor, this Json type() is kNull, means this Json is empty,
   // which is different from a JSON has a null value.
+  // Notes that, if a variable was constructed with the default constructor,
+  // its type will be determined in the next operation, e.g.:
+  //   Json j;
+  //   j.push_back(0);  // push_back operation just for JSON array,
+  //                    // so the j become a JSON array.
+  //   j["key"] = 1;    // error! j is a JSON array.
   Json();
 
   // Constructs a Json with the corresponding JsonValue in C++. Does not
