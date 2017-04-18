@@ -75,11 +75,6 @@ class JsonValue
 
   friend class Json;
 
-  // static member function, returns the empty instance of
-  // JSON array or JSON object.
-  static const Json::Array&   get_array_instance();
-  static const Json::Object&  get_object_instance();
-
   // Pure virtual functions.
   virtual Json::Type  type() const = 0;
   virtual size_t      size() const = 0;
@@ -261,21 +256,6 @@ class JsonObject : public JsonValue
 // Implementation of JsonValue.
 
 // ----------------------------------------------------------------------------
-// Static functions.
-
-const Json::Array& JsonValue::get_array_instance()
-{
-  static const Json::Array& result = Json::Array();
-  return result;
-}
-
-const Json::Object& JsonValue::get_object_instance()
-{
-  static const Json::Object& result = Json::Object();
-  return result;
-}
-
-// ----------------------------------------------------------------------------
 // Member functions.
 
 Json& JsonValue::get_value_from_arr(size_t index)
@@ -372,13 +352,6 @@ void JsonValue::erase(const std::string& key)
 
 // ============================================================================
 // Implementation of Json class.
-
-// ----------------------------------------------------------------------------
-// Static value initialization.
-
-Json Json::null_json = Json();
-Json Json::null_array = Json::Array();
-Json Json::null_object = Json::Object();
 
 // ----------------------------------------------------------------------------
 // Static functions.
@@ -508,7 +481,7 @@ Json::Json(std::initializer_list<Json> ilist)
 
   if (maybe_object)
   {
-    node_ = std::make_shared<JsonObject>(JsonValue::get_object_instance());
+    node_ = std::make_shared<JsonObject>();
     std::for_each(ilist.begin(), ilist.end(), [this](const Json& v)
     {
       insert({ v[0].as_string(),v[1] });
@@ -530,7 +503,7 @@ Json& Json::operator=(std::initializer_list<Json> ilist)
 
   if (maybe_object)
   {
-    node_ = std::make_shared<JsonObject>(JsonValue::get_object_instance());
+    node_ = std::make_shared<JsonObject>();
     std::for_each(ilist.begin(), ilist.end(), [this](const Json& v)
     {
       insert({ v[0].as_string(),v[1] });
@@ -618,7 +591,7 @@ Json::JsonProxy Json::operator[](const std::string& key)
 {
   if (type() == Type::kNull)
   {
-    *this = null_object;
+    *this = Object{};
   }
   EXPECT_OBJECT;
   return JsonProxy(*this, key);
@@ -636,7 +609,7 @@ Json& Json::operator[](const std::string& key)
 {
   if (type() == Type::kNull)
   {
-    *this = null_object;
+    *this = Object{};
     return node_.get()->get_value_from_obj(key, lvalue{});
   }
   EXPECT_OBJECT;
@@ -672,7 +645,7 @@ void Json::push_back(const ArrayValue& element)
 {
   if (type() == Type::kNull)
   {
-    *this = null_array;
+    *this = Array{};
     node_.get()->push_back(element);
     return;
   }
@@ -684,7 +657,7 @@ void Json::push_back(ArrayValue&& element)
 {
   if (type() == Type::kNull)
   {
-    *this = null_array;
+    *this = Array{};
     node_.get()->push_back(std::move(element));
     return;
   }
@@ -703,7 +676,7 @@ void Json::insert(const ObjectValue& pair)
 {
   if (type() == Type::kNull)
   {
-    *this = null_object;
+    *this = Object{};
     node_.get()->insert(pair);
     return;
   }
@@ -715,7 +688,7 @@ void Json::insert(ObjectValue&& pair)
 {
   if (type() == Type::kNull)
   {
-    *this = null_object;
+    *this = Object{};
     node_.get()->insert(std::move(pair));
     return;
   }
