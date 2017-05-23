@@ -4,28 +4,29 @@
 
 ## Catalog
 
-* [Introduction](#Introduction)
-* [Conversion table](#Conversion table)
-* [Getting start](#Getting start)
-  * [Simple example](#Simple example) 
-  * [Parse](#Parse)
-  * [Encode / Decode](#Encode / Decode)
-  * [Serialization / Deserialization](#Serialization / Deserialization)
-  * [STL-like access](#STL-like access)
-  * [Input / Output](#Input / Output)
-* [Notes](#Notes)
+* [Introduction](#introduction)
+* [Conversion table](#conversion-table)
+* [Getting start](#getting-start)
+  * [Simple example](#simple-example) 
+  * [Parse](#parse)
+  * [Encode / Decode](#encode--decode)
+  * [Serialization / Deserialization](#serialization--deserialization)
+  * [STL-like access](#stl-like-access)
+  * [Input / Output](#input--output)
+* [Notes](#notes)
   * [initializer_list](#initializer_list)
-  * [`operator[]` with a `JsonObject`](#`operator[]` with a `JsonObject`)
-  * [Output format](#Output format)
-  * [Other](#Other)
+  * [`operator[]` with a `JsonObject`](#operator-with-a-jsonobject)
+  * [Output format](#output-format)
+  * [Other](#other)
 
-### Introduction
+## Introduction
 
 The `Json` class is a convenient tool to encode/decode for JSON, it provides a series of interfaces to parse, generate, modify and output a JSON value. This class is compliance with [RFC 7159](https://tools.ietf.org/html/rfc7159) (which obsoletes RFC 4627) and [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 
-### Conversion table
+## Conversion table
 
 The type conversion table for JSON and C++ is as follow:
+
 |JSON | C++ |
 |:---:|:---:|
 | null | nullptr |
@@ -36,7 +37,7 @@ The type conversion table for JSON and C++ is as follow:
 | array | vector |
 | object | map |
 
-### Getting start
+## Getting start
 
 ### Simple example
 
@@ -155,7 +156,7 @@ to string / from string
   // }
 ```
 
-### Notes
+## Notes
 
 There are some places in this class to note:
 
@@ -168,7 +169,8 @@ There are some places in this class to note:
 ### initializer_list
 
 It can be use easily with `std::initializer_list`, as mentioned above. There are some places where you should pay attention to. You can create a Json with `std::initalizer_list`, and the type of this Json and its member, may be an array or an object. It is worth noting that the Json will be a `Json object` as much as possible. Here are a few cases:
-  1. Uses braces without elements does not call the `std::initializer_list` constructor but call the default constructor, so if you writes code like these:
+
+1. Uses braces without elements does not call the `std::initializer_list` constructor but call the default constructor, so if you writes code like these:
   ```c++
     Json j1{};
     Json j2 = {}; 
@@ -180,20 +182,23 @@ It can be use easily with `std::initializer_list`, as mentioned above. There are
     std::cout << j2;  // null
     std::cout << j3;  // {"null":null}
   ```
-  2. Uses braces without elements more than one times, the innermost one
+
+2. Uses braces without elements more than one times, the innermost one
         will be treated as default constructor and other will be treated as
         a JSON array(see point 3), e.g.:
  ```c++
    Json j{{{}}}; 
    std::cout << j;  // [[null]]
  ```
-  3. Things go different when you write a code like this:
+
+3. Things go different when you write a code like this:
   ```c++
     Json j({});
     std::cout << j;  // {}
   ```
   the braces in here will really call the `std::initializer_list` constructor and luckily, it may be an object so it really becomes an object. So the grammar of `Json j({})` is to construct a Json with another Json which is an object, so the result is what you see.
-  4. The format of constructing a JSON array like this:
+
+4. The format of constructing a JSON array like this:
   ```
     {JsonValue[,JsonValue]}
   ```
@@ -207,7 +212,8 @@ It can be use easily with `std::initializer_list`, as mentioned above. There are
     Json j = {{"this is an","array"}};
   ```
   what you might want is an array in an array, but it does not handle it like you want(see point 5,6).
-  5. The format of constructing a JSON object like this:
+
+5. The format of constructing a JSON object like this:
   ```
     {{"string",JsonValue}[,{"string",JsonValue}]}
   ```
@@ -221,7 +227,8 @@ It can be use easily with `std::initializer_list`, as mentioned above. There are
     Json j = {{"this is an","array"}}
   ```
   conforms to the format of a JSON object, and it will be treated as an object.
-  6. You can explicitly declare the type, i.e., use `Json::array_t` or `Json::object_t`, to specify the type of JSON. This rule will cover the preceding rules. e.g.:
+
+6. You can explicitly declare the type, i.e., use `Json::array_t` or `Json::object_t`, to specify the type of JSON. This rule will cover the preceding rules. e.g.:
   ```c++
     Json j = Json::array_t{{"this is an","array"}};
   ```

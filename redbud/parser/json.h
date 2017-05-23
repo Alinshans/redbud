@@ -53,7 +53,7 @@ class JsonValue;
 // -------------------------
 // 
 // For more information please read this documents:
-// 
+// https://github.com/Alinshans/redbud/blob/master/document/parser/json.md
 class Json
 {
 
@@ -142,6 +142,7 @@ class Json
   // initializer_list
 
   // Some places should be noted and please see:
+  // https://github.com/Alinshans/redbud/blob/master/document/parser/json.md#initializer_list
   
   Json(std::initializer_list<Json> ilist);
   Json& operator=(std::initializer_list<Json> ilist);
@@ -183,6 +184,7 @@ class Json
   // should be unique, so the repeated keys will be overwritten.
   //
   // Some places should be noted and please see:
+  // https://github.com/Alinshans/redbud/blob/master/document/parser/json.md#operator-with-a-jsonobject
   Json&       operator[](const string_t& key);
   const Json& operator[](const string_t& key) const;
 
@@ -238,6 +240,7 @@ class Json
   // If the PrintType is Compact, the second parameter will be ignored.
   //
   // Some places should be noted and please see:
+  // https://github.com/Alinshans/redbud/blob/master/document/parser/json.md#output-format
   void print(PrintType t = PrintType::Compact, size_t ind = 4) const;
 
   // --------------------------------------------------------------------------
