@@ -78,32 +78,31 @@ class JsonValue
   // Pure virtual functions.
   virtual Json::Type  type() const = 0;
   virtual size_t      size() const = 0;
-  virtual void        clear() = 0;
 
   // Gets Json from JsonArray.
   Json&               get_value_from_arr(size_t i);
   const Json&         get_value_from_arr(size_t i) const;
 
   // Gets Json from JsonObject.
-  Json&               get_value_from_obj(const std::string& key, lvalue);
-  const Json&         get_value_from_obj(const std::string& key, rvalue) const;
+  Json&               get_value_from_obj(const Json::string_t& key);
+  const Json&         get_value_from_obj(const Json::string_t& key) const;
 
   // If the types does not match, the corresponding instance
   // will be returned.
   bool                get_bool_safe()   const;
-  double              get_number_safe() const;
-  const std::string&  get_string_safe() const;
-  const Json::Array&  get_array_safe()  const;
-  const Json::Object& get_object_safe() const;
+  double              get_double_safe() const;
+  const Json::string_t&  get_string_safe() const;
+  const Json::array_t&  get_array_safe()  const;
+  const Json::object_t& get_object_safe() const;
 
   // STL-like access.
   template <typename T>
   void push_back(T&& e);
   void pop_back();
-  void insert(const Json::ObjectValue& p);
-  void insert(Json::ObjectValue&& p);
+  void insert(const Json::object_value_t& p);
+  void insert(Json::object_value_t&& p);
   void erase(size_t i);
-  void erase(const std::string& key);
+  void erase(const Json::string_t& key);
 
 };
 
@@ -121,7 +120,6 @@ class JsonNull : public JsonValue
   // override
   Json::Type type() const override { return Json::Type::kJsonNull; }
   size_t     size() const override { return 1; }
-  void       clear()      override {}
 
 };
 
@@ -140,7 +138,6 @@ class JsonBool : public JsonValue
   // override
   Json::Type type() const override { return Json::Type::kJsonBool; }
   size_t     size() const override { return 1; }
-  void       clear()      override { value_ = false; }
 
  private:
   bool value_;
@@ -166,7 +163,6 @@ class JsonNumber : public JsonValue
   // override
   Json::Type type() const override { return Json::Type::kJsonNumber; }
   size_t     size() const override { return 1; }
-  void       clear()      override { value_ = 0.0; }
 
  private:
   double value_;
@@ -183,17 +179,16 @@ class JsonString : public JsonValue
 
   JsonString() = default;
   JsonString(const char* sz) :value_(sz) {}
-  JsonString(const std::string& str) :value_(str) {}
-  JsonString(std::string&& str) :value_(std::move(str)) {}
+  JsonString(const Json::string_t& str) :value_(str) {}
+  JsonString(Json::string_t&& str) :value_(std::move(str)) {}
   ~JsonString() = default;
 
   // override
   Json::Type type() const override { return Json::Type::kJsonString; }
   size_t     size() const override { return 1; }
-  void       clear()      override { value_.clear(); }
 
  private:
-  std::string value_;
+  Json::string_t value_;
 
 };
 
@@ -206,8 +201,8 @@ class JsonArray : public JsonValue
   friend class JsonValue;
 
   JsonArray() = default;
-  JsonArray(const Json::Array& a) :value_(a) {}
-  JsonArray(Json::Array&& a) :value_(std::move(a)) {}
+  JsonArray(const Json::array_t& a) :value_(a) {}
+  JsonArray(Json::array_t&& a) :value_(std::move(a)) {}
   JsonArray(const std::initializer_list<Json>& ilist)
     :value_(ilist.begin(), ilist.end())
   {
@@ -217,10 +212,9 @@ class JsonArray : public JsonValue
   // override
   Json::Type type() const override { return Json::Type::kJsonArray; }
   size_t     size() const override { return value_.size(); }
-  void       clear()      override { value_.clear(); }
 
  private:
-  Json::Array value_;
+  Json::array_t value_;
 
 };
 
@@ -233,10 +227,10 @@ class JsonObject : public JsonValue
   friend class JsonValue;
   
   JsonObject() = default;
-  JsonObject(const Json::Object& o) :value_(o) {}
-  JsonObject(Json::Object&& o) :value_(std::move(o)) {}
+  JsonObject(const Json::object_t& o) :value_(o) {}
+  JsonObject(Json::object_t&& o) :value_(std::move(o)) {}
   JsonObject(const std::initializer_list<
-             std::pair<std::string, Json>>& ilist)
+             std::pair<Json::string_t, Json>>& ilist)
     :value_(ilist.begin(), ilist.end())
   {
   }
@@ -245,10 +239,9 @@ class JsonObject : public JsonValue
   // override
   Json::Type type() const override { return Json::Type::kJsonObject; }
   size_t     size() const override { return value_.size(); }
-  void       clear() override { value_.clear(); }
 
  private:
-  Json::Object value_;
+  Json::object_t value_;
 
 };
 
@@ -270,13 +263,13 @@ const Json& JsonValue::get_value_from_arr(size_t index) const
   return arr[index];
 }
 
-Json& JsonValue::get_value_from_obj(const std::string& key, lvalue)
+Json& JsonValue::get_value_from_obj(const Json::string_t& key)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   return obj[key];
 }
 
-const Json& JsonValue::get_value_from_obj(const std::string& key, rvalue) const
+const Json& JsonValue::get_value_from_obj(const Json::string_t& key) const
 {
   const auto& obj = static_cast<const JsonObject&>(*this).value_;
   const auto& key_pos = obj.find(key);
@@ -289,22 +282,22 @@ bool JsonValue::get_bool_safe() const
   return static_cast<const JsonBool&>(*this).value_;
 }
 
-double JsonValue::get_number_safe() const
+double JsonValue::get_double_safe() const
 {
   return static_cast<const JsonNumber&>(*this).value_;
 }
 
-const std::string& JsonValue::get_string_safe() const
+const Json::string_t& JsonValue::get_string_safe() const
 {
   return static_cast<const JsonString&>(*this).value_;
 }
 
-const Json::Array& JsonValue::get_array_safe() const
+const Json::array_t& JsonValue::get_array_safe() const
 {
   return static_cast<const JsonArray&>(*this).value_;
 }
 
-const Json::Object& JsonValue::get_object_safe() const
+const Json::object_t& JsonValue::get_object_safe() const
 {
   return static_cast<const JsonObject&>(*this).value_;
 }
@@ -322,13 +315,13 @@ void JsonValue::pop_back()
   arr.pop_back();
 }
 
-void JsonValue::insert(const Json::ObjectValue& p)
+void JsonValue::insert(const Json::object_value_t& p)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   obj[p.first] = p.second;
 }
 
-void JsonValue::insert(Json::ObjectValue&& p)
+void JsonValue::insert(Json::object_value_t&& p)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   obj[p.first] = std::move(p.second);
@@ -344,7 +337,7 @@ void JsonValue::erase(size_t i)
   arr.erase(arr.begin() + i);
 }
 
-void JsonValue::erase(const std::string& key)
+void JsonValue::erase(const Json::string_t& key)
 {
   auto& obj = static_cast<JsonObject&>(*this).value_;
   obj.erase(key);
@@ -356,12 +349,12 @@ void JsonValue::erase(const std::string& key)
 // ----------------------------------------------------------------------------
 // Static functions.
 
-Json Json::parse(const std::string& json_text)
+Json Json::parse(const Json::string_t& json_text)
 {
   return JsonParser::parse(json_text);
 }
 
-Json Json::parse(std::string&& json_text)
+Json Json::parse(Json::string_t&& json_text)
 {
   return JsonParser::parse(std::move(json_text));
 }
@@ -370,6 +363,7 @@ Json Json::parse(std::string&& json_text)
 // Constructor / Copy constructor / Move constructor / Destructor
 
 Json::Json()
+  :node_(std::make_shared<JsonNull>())
 {
 }
 
@@ -384,27 +378,27 @@ Json::Json(bool b)
 }
 
 Json::Json(int32_t n)
-  :node_(std::make_shared<JsonNumber>(n))
+  : node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(uint32_t n)
-  :node_(std::make_shared<JsonNumber>(n))
+  : node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(int64_t n)
-  :node_(std::make_shared<JsonNumber>(n))
+  : node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(uint64_t n)
-  :node_(std::make_shared<JsonNumber>(n))
+  : node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(double d)
-  :node_(std::make_shared<JsonNumber>(d))
+  : node_(std::make_shared<JsonNumber>(d))
 {
 }
 
@@ -413,32 +407,32 @@ Json::Json(const char* sz)
 {
 }
 
-Json::Json(const std::string& str)
+Json::Json(const Json::string_t& str)
   :node_(std::make_shared<JsonString>(str))
 {
 }
 
-Json::Json(std::string&& str)
+Json::Json(Json::string_t&& str)
   :node_(std::make_shared<JsonString>(std::move(str)))
 {
 }
 
-Json::Json(const Array& a)
+Json::Json(const array_t& a)
   :node_(std::make_shared<JsonArray>(a))
 {
 }
 
-Json::Json(Array&& a)
+Json::Json(array_t&& a)
   :node_(std::make_shared<JsonArray>(std::move(a)))
 {
 }
 
-Json::Json(const Object& o)
+Json::Json(const object_t& o)
   :node_(std::make_shared<JsonObject>(o))
 {
 }
 
-Json::Json(Object&& o)
+Json::Json(object_t&& o)
   :node_(std::make_shared<JsonObject>(std::move(o)))
 {
 }
@@ -521,10 +515,6 @@ Json& Json::operator=(std::initializer_list<Json> ilist)
 
 Json::Type Json::type() const
 {
-  if (node_.use_count() == 0)
-  {
-    return Type::kNull;
-  }
   return node_.get()->type();
 }
 
@@ -544,25 +534,49 @@ bool Json::as_bool() const
   return node_.get()->get_bool_safe();
 }
 
-double Json::as_number() const
+int32_t Json::as_int32() const
 {
   EXPECT_NUMBER;
-  return node_.get()->get_number_safe();
+  return static_cast<int32_t>(node_.get()->get_double_safe());
 }
 
-const std::string& Json::as_string() const
+uint32_t Json::as_uint32() const
+{
+  EXPECT_NUMBER;
+  return static_cast<uint32_t>(node_.get()->get_double_safe());
+}
+
+int64_t Json::as_int64() const
+{
+  EXPECT_NUMBER;
+  return static_cast<int64_t>(node_.get()->get_double_safe());
+}
+
+uint64_t Json::as_uint64() const
+{
+  EXPECT_NUMBER;
+  return static_cast<uint64_t>(node_.get()->get_double_safe());
+}
+
+double Json::as_double() const
+{
+  EXPECT_NUMBER;
+  return node_.get()->get_double_safe();
+}
+
+const Json::string_t& Json::as_string() const
 {
   EXPECT_STRING;
   return node_.get()->get_string_safe();
 }
 
-const Json::Array& Json::as_array() const
+const Json::array_t& Json::as_array() const
 {
   EXPECT_ARRAY;
   return node_.get()->get_array_safe();
 }
 
-const Json::Object& Json::as_object() const
+const Json::object_t& Json::as_object() const
 {
   EXPECT_OBJECT;
   return node_.get()->get_object_safe();
@@ -585,51 +599,29 @@ const Json& Json::operator[](size_t index) const
   return node_.get()->get_value_from_arr(index);
 }
 
-#if JSON_OBJECT_USE_PROXY
-
-Json::JsonProxy Json::operator[](const std::string& key)
+Json& Json::operator[](const Json::string_t& key)
 {
-  if (type() == Type::kNull)
+  if (type() == Type::kJsonNull)
   {
-    *this = Object{};
+    *this = object_t{};
+    return node_.get()->get_value_from_obj(key);
   }
   EXPECT_OBJECT;
-  return JsonProxy(*this, key);
+  return node_.get()->get_value_from_obj(key);
 }
 
-const Json::JsonProxy Json::operator[](const std::string& key) const
+const Json& Json::operator[](const Json::string_t& key) const
 {
   EXPECT_OBJECT;
-  return JsonProxy(const_cast<Json&>(*this), key);
+  return node_.get()->get_value_from_obj(key);
 }
-
-#else
-
-Json& Json::operator[](const std::string& key)
-{
-  if (type() == Type::kNull)
-  {
-    *this = Object{};
-    return node_.get()->get_value_from_obj(key, lvalue{});
-  }
-  EXPECT_OBJECT;
-  return node_.get()->get_value_from_obj(key, lvalue{});
-}
-
-const Json& Json::operator[](const std::string& key) const
-{
-  EXPECT_OBJECT;
-  return node_.get()->get_value_from_obj(key, rvalue{});
-}
-
-#endif // JSON_OBJECT_USE_PROXY
 
 // ----------------------------------------------------------------------------
 // STL-like access.
 
 size_t Json::size() const
 {
-  if (type() == Type::kNull)
+  if (type() == Type::kJsonNull)
   {
     return 0;
   }
@@ -641,11 +633,18 @@ bool Json::empty() const
   return size() == 0;
 }
 
-void Json::push_back(const ArrayValue& element)
+bool Json::has_key(const Json::string_t& key)
 {
-  if (type() == Type::kNull)
+  EXPECT_OBJECT;
+  auto&& obj = as_object();
+  return obj.find(key) != obj.end();
+}
+
+void Json::push_back(const array_value_t& element)
+{
+  if (type() == Type::kJsonNull)
   {
-    *this = Array{};
+    *this = array_t{};
     node_.get()->push_back(element);
     return;
   }
@@ -653,11 +652,11 @@ void Json::push_back(const ArrayValue& element)
   node_.get()->push_back(element);
 }
 
-void Json::push_back(ArrayValue&& element)
+void Json::push_back(array_value_t&& element)
 {
-  if (type() == Type::kNull)
+  if (type() == Type::kJsonNull)
   {
-    *this = Array{};
+    *this = array_t{};
     node_.get()->push_back(std::move(element));
     return;
   }
@@ -672,11 +671,11 @@ void Json::pop_back()
   node_.get()->pop_back();
 }
 
-void Json::insert(const ObjectValue& pair)
+void Json::insert(const object_value_t& pair)
 {
-  if (type() == Type::kNull)
+  if (type() == Type::kJsonNull)
   {
-    *this = Object{};
+    *this = object_t{};
     node_.get()->insert(pair);
     return;
   }
@@ -684,11 +683,11 @@ void Json::insert(const ObjectValue& pair)
   node_.get()->insert(pair);
 }
 
-void Json::insert(ObjectValue&& pair)
+void Json::insert(object_value_t&& pair)
 {
-  if (type() == Type::kNull)
+  if (type() == Type::kJsonNull)
   {
-    *this = Object{};
+    *this = object_t{};
     node_.get()->insert(std::move(pair));
     return;
   }
@@ -702,7 +701,7 @@ void Json::erase(size_t i)
   node_.get()->erase(i);
 }
 
-void Json::erase(const std::string& key)
+void Json::erase(const Json::string_t& key)
 {
   EXPECT_OBJECT;
   node_.get()->erase(key);
@@ -710,36 +709,32 @@ void Json::erase(const std::string& key)
 
 void Json::clear()
 {
-  if (type() == Type::kJsonNull || type() == Type::kNull)
-  {
-    return;
-  }
-  node_.get()->clear();
+  *this = Json{};
 }
 
 // ----------------------------------------------------------------------------
 // Serialization / Deserialization
 
-void Json::dumps(std::string& str) const
+void Json::dumps(Json::string_t& str) const
 {
   str.clear();
   str.reserve(size() << 6);
   _dumps_from(*this, str);
 }
 
-std::string Json::dumps() const
+Json::string_t Json::dumps() const
 {
-  std::string str;
+  Json::string_t str;
   dumps(str);
   return str;
 }
 
-void Json::loads(const std::string & str)
+void Json::loads(const Json::string_t & str)
 {
   *this = JsonParser::parse(str);
 }
 
-void Json::loads(std::string&& str)
+void Json::loads(Json::string_t&& str)
 {
   *this = JsonParser::parse(std::move(str));
 }
@@ -758,7 +753,7 @@ void Json::print(PrintType t, size_t ind) const
       std::printf("%s", as_bool() ? "true" : "false");
       break;
     case Type::kJsonNumber:
-      std::printf("%.17g", as_number());
+      std::printf("%.17g", as_double());
       break;
     case Type::kJsonString:
       std::printf("%s", as_string().c_str());
@@ -781,7 +776,7 @@ void Json::print(PrintType t, size_t ind) const
 
 // Serialization.
 
-void Json::_dumps_from(const Json& j, std::string& str) const
+void Json::_dumps_from(const Json& j, Json::string_t& str) const
 {
   switch (j.type())
   {
@@ -793,7 +788,7 @@ void Json::_dumps_from(const Json& j, std::string& str) const
       break;
     case Type::kJsonNumber:
       char buf[22]; // (-) + (17 digits) + (.) + (e) + (+)
-      std::snprintf(buf, sizeof(buf), "%.17g", j.as_number());
+      std::snprintf(buf, sizeof(buf), "%.17g", j.as_double());
       str.append(buf);
       break;
     case Type::kJsonString:
@@ -816,16 +811,24 @@ void Json::_dumps_from(const Json& j, std::string& str) const
 #define PUTC(ch)       str.push_back(static_cast<char>(ch))
 #define CODE(bin, pre) (static_cast<uint8_t>(bin) & pre)
 
-void Json::_dumps_string(const std::string& s, std::string& str) const
+void Json::_dumps_string(const Json::string_t& s, Json::string_t& str) const
 {
   PUTC('\"');
   for (size_t i = 0; i < s.size(); ++i)
   {
-    /*if (Token::escape(s[i]))
+#if 1
+    if (Token::escape(s[i]))
     {
+      PUTC('\\');
+    }
+    PUTC(s[i]);
+#else
+    if (Token::escape(s[i]))
+    {
+      PUTC('\\');
       PUTC(s[i]);
     }
-    else*/ if (GETC(s[i]) <= 0x7F)
+    else if (GETC(s[i]) <= 0x7F)
     { // One byte : 0xxxxxxx  
       // Preserves ASCII characters.
       PUTC(s[i]);
@@ -864,11 +867,12 @@ void Json::_dumps_string(const std::string& s, std::string& str) const
       str.append(buf);
       i += 3;
     }
+#endif  // convert unicode to \uxxxx
   }
   PUTC('\"');
 }
 
-void Json::_dumps_array(const Array& a, std::string& str) const
+void Json::_dumps_array(const array_t& a, Json::string_t& str) const
 {
   bool begin = true;
   PUTC('[');
@@ -884,7 +888,7 @@ void Json::_dumps_array(const Array& a, std::string& str) const
   PUTC(']');
 }
 
-void Json::_dumps_object(const Object& o, std::string& str) const
+void Json::_dumps_object(const object_t& o, Json::string_t& str) const
 {
   bool begin = true;
   PUTC('{');
@@ -930,7 +934,7 @@ void Json::_print_array(PrintType t, size_t ind, size_t dep) const
         std::printf("%s", it->as_bool() ? "true" : "false");
         break;
       case Type::kJsonNumber:
-        std::printf("%.17g", it->as_number());
+        std::printf("%.17g", it->as_double());
         break;
       case Type::kJsonString:
         std::printf("\"%s\"", it->as_string().c_str());
@@ -942,7 +946,7 @@ void Json::_print_array(PrintType t, size_t ind, size_t dep) const
         it->_print_object(t, ind, dep + 1);
         break;
     }
-    if (it != last && it->type() != Type::kNull)
+    if (it != last && it->type() != Type::kJsonNull)
     {
       std::printf(",");
     }
@@ -975,7 +979,7 @@ void Json::_print_object(PrintType t, size_t ind, size_t dep) const
         std::printf("%s", it->second.as_bool() ? "true" : "false");
         break;
       case Type::kJsonNumber:
-        std::printf("%.17g", it->second.as_number());
+        std::printf("%.17g", it->second.as_double());
         break;
       case Type::kJsonString:
         std::printf("\"%s\"", it->second.as_string().c_str());
@@ -1021,56 +1025,11 @@ std::ostream& operator<<(std::ostream& os, const Json& j)
 
 std::istream& operator >> (std::istream& is, Json& j)
 {
-  std::string json_buf;
+  Json::string_t json_buf;
   std::getline(is, json_buf, '\n');
   j = Json::parse(json_buf);
   return is;
 }
-
-#if JSON_OBJECT_USE_PROXY
-
-// ============================================================================
-// Proxy class.
-
-Json::JsonProxy::JsonProxy(Json& n, const std::string& key)
-  :j_(n), key_(key)
-{
-}
-
-Json::JsonProxy& Json::JsonProxy::operator=(const Json& rhs)
-{
-  j_.node_.get()->get_value_from_obj(key_, lvalue{}) = rhs;
-  return *this;
-}
-
-Json::JsonProxy& Json::JsonProxy::operator=(Json&& rhs)
-{
-  j_.node_.get()->get_value_from_obj(key_, lvalue{}) = rhs;
-  return *this;
-}
-
-Json::JsonProxy::operator Json() const
-{
-  return j_.node_.get()->get_value_from_obj(key_, rvalue{});
-}
-
-Json::JsonProxy Json::JsonProxy::operator[](const std::string& key)
-{
-  return j_.node_.get()->get_value_from_obj(key_, lvalue{})[key];
-}
-
-Json* Json::JsonProxy::operator&()
-{
-  return &(j_.node_.get()->get_value_from_obj(key_, lvalue{}));
-}
-
-const Json* Json::JsonProxy::operator&() const
-{
-  return &(j_.node_.get()->get_value_from_obj(key_, rvalue{}));
-}
-
-#endif // JSON_OBJECT_USE_PROXY
-
 
 #undef EXPECT_BOOL
 #undef EXPECT_NUMBER
