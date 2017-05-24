@@ -21,6 +21,7 @@
 #include <memory>            // shared_ptr
 #include <utility>           // pair, move, forward
 #include <initializer_list>  // initializer_list
+#include <type_traits>       // enable_if, 
 
 namespace redbud
 {
@@ -97,6 +98,10 @@ class Json
   static Json parse(const string_t& json);
   static Json parse(string_t&& json);
 
+  template <typename T, typename = typename std::enable_if<
+    std::is_constructible<Json, T>::value, T>::type>
+  static Json to_json(const T& value) { return value; }
+
   // --------------------------------------------------------------------------
   // Constructor / Copy constructor / Move constructor / Destructor
  public:
@@ -120,6 +125,19 @@ class Json
   Json(array_t&&);        // array
   Json(const object_t&);  // object
   Json(object_t&&);       // object
+
+  // Constructs form object-like container like std::map, std::unordered_map.
+  template <typename M, typename std::enable_if<
+    std::is_constructible<Json, typename M::key_type>::value
+    && std::is_constructible<Json, typename M::mapped_type>::value,
+    int>::type = 0>
+  Json(const M& value) :Json(object_t(value.begin(), value.end())) {}
+
+  // Constructs form array-like container like std::vector, std::list.
+  template <typename A, typename std::enable_if<
+    std::is_constructible<Json, typename A::value_type>::value,
+    int>::type = 0>
+  Json(const A& value) : Json(array_t(value.begin(), value.end())) {}
 
   Json(const Json&);
   Json(Json&&);
@@ -243,15 +261,20 @@ class Json
   // https://github.com/Alinshans/redbud/blob/master/document/parser/json.md#output-format
   void print(PrintType t = PrintType::Compact, size_t ind = 4) const;
 
+ public:
   // --------------------------------------------------------------------------
   // Overloads standard input / output.
   // operator<< actually calls print(PrintType::Compact).
   // operator>> will parse the input string first, so if the input string
   // is a invalid JSON value, it will yield an exception.
 
- public:
   friend std::ostream& operator<<(std::ostream& os, const Json& j);
   friend std::istream& operator>>(std::istream& is, Json& j);
+
+  // Overloads comparation operator.
+
+  friend bool operator==(const Json& lhs, const Json& rhs);
+  friend bool operator!=(const Json& lhs, const Json& rhs);
 
   // --------------------------------------------------------------------------
   // Private member data and member functions.

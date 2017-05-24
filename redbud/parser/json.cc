@@ -17,8 +17,9 @@
 
 #include "json_parser.h"
 #include "tokenizer.h"
-#include "../exception.h"
 #include "../platform.h"
+#include "../math.h"
+#include "../exception.h"
 
 namespace redbud
 {
@@ -1029,6 +1030,42 @@ std::istream& operator >> (std::istream& is, Json& j)
   std::getline(is, json_buf, '\n');
   j = Json::parse(json_buf);
   return is;
+}
+
+// Overloads comparation operator.
+
+bool operator==(const Json& lhs, const Json& rhs)
+{
+  if (lhs.type() != rhs.type()) return false;
+  switch (lhs.type())
+  {
+    case Json::Type::kJsonNull:
+      return true;
+      break;
+    case Json::Type::kJsonBool:
+      return lhs.as_bool() == rhs.as_bool();
+      break;
+    case Json::Type::kJsonNumber:
+      return safe_abs(lhs.as_double() - rhs.as_double()) < 0.0000000000000001;
+      break;
+    case Json::Type::kJsonString:
+      return lhs.as_string() == rhs.as_string();
+      break;
+    case Json::Type::kJsonArray:
+      return lhs.as_array() == rhs.as_array();
+      break;
+    case Json::Type::kJsonObject:
+      return lhs.as_object() == rhs.as_object();
+      break;
+    default:
+      break;
+  }
+  return false;
+}
+
+bool operator!=(const Json& lhs, const Json& rhs)
+{
+  return !(lhs == rhs);
 }
 
 #undef EXPECT_BOOL

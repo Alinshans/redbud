@@ -236,7 +236,7 @@ It can be use easily with `std::initializer_list`, as mentioned above. There are
   output it you will see: `[["this is an","array"]]`, That is what you want to see in the point 4.
   
 
-The above is the rule of using braces(std::initializer_list), and they can be used in combination. The following is a complete example:
+The above is the rule of using braces(`std::initializer_list`), and they can be used in combination. The following is a complete example:
 ```c++
   Json j = {
     { "null",nullptr },
