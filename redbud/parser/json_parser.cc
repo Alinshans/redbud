@@ -191,7 +191,7 @@ Json JsonParser::parse_array()
   r.skipspace();
   r.expect('[');
   r.skipspace();
-  Json::Array arr;
+  Json::array_t arr;
   if (r.match(']'))
   {
     return arr;
@@ -231,7 +231,7 @@ Json JsonParser::parse_object()
   r.skipspace();
   r.expect('{');
   r.skipspace();
-  Json::Object obj;
+  Json::object_t obj;
   if (r.match('}'))
   {
     return obj;
