@@ -41,8 +41,13 @@
 # image files are treated as binary by default.
 ###############################################################################
 #*.jpg   binary
+#*.JPG   binary
+#*.bmp   binary
+#*.BMP   binary
 #*.png   binary
+#*.PNG   binary
 #*.gif   binary
+#*.GIF   binary
 
 ###############################################################################
 # diff behavior for common document formats
@@ -51,8 +56,8 @@
 # is only available from the command line. Turn it on by uncommenting the 
 # entries below.
 ###############################################################################
-#*.doc   diff=astextplain
-#*.DOC   diff=astextplain
+#*.doc   diff=word
+#*.DOC   diff=word
 #*.docx  diff=astextplain
 #*.DOCX  diff=astextplain
 #*.dot   diff=astextplain
