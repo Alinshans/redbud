@@ -15,13 +15,14 @@
 
 #include <cstdint>
 
+#include <algorithm>
 #include <map>               // map
 #include <string>            // string
 #include <vector>            // vector
 #include <memory>            // shared_ptr
 #include <utility>           // pair, move, forward
 #include <initializer_list>  // initializer_list
-#include <type_traits>       // enable_if, 
+#include <type_traits>       // enable_if, is_constructible, 
 
 #include "../platform.h"
 
@@ -42,49 +43,6 @@ using std::uint64_t;
 // Forward declaration
 
 class JsonValue;
-
-template <typename T, typename Ptr = T*, typename Ref = T&>
-struct __json_iterator
-{
-  using value_type = T;
-  using node_type = JsonValue;
-  using pointer = Ptr;
-  using const_pointer = const Ptr;
-  using reference = Ref;
-  using const_reference = const Ref;
-  using primary_iterator = __json_iterator<T, Ptr, Ref>;
-  using array_iterator = typename T::array_t::iterator;
-  using object_iterator = typename T::object_t::iterator;
-
-  node_type* node_;
-  node_type* begin_;
-  node_type* end_;
-
-  __json_iterator() {}
-  __json_iterator(node_type* n) :node_(n) {
-    if (n->type() == Json::Type::kJsonArray)
-    {
-      begin_ = n->get_array_safe().begin();
-      end_ = n->get_array_safe().end();
-    }
-    else if (n->type() == Json::Type::kJsonObject)
-    {
-      begin_ = n->get_object_safe().begin();
-      end_ = n->get_object_safe().end();
-    }
-    else
-    {
-      begin_ = n;
-      end_ = std::next(begin_);
-    }
-  }
-  __json_iterator(const primary_iterator& iter)
-    :node_(iter.node_), begin_(iter.begin_), end_(iter.end_)
-  {
-  }
-
-  reference operator*() const { return node_->; }
-};
 
 // ============================================================================
 // Json class
@@ -132,9 +90,9 @@ class Json
   };
 
   // Alias declarations.
-  using string_t = std::string;
-  using object_t = std::map<string_t, Json>;
-  using array_t = std::vector<Json>;
+  using string_t       = std::string;
+  using object_t       = std::map<string_t, Json>;
+  using array_t        = std::vector<Json>;
   using array_value_t  = array_t::value_type;
   using object_value_t = object_t::value_type;
 
@@ -161,6 +119,67 @@ class Json
 #endif
   static Json to_json(T&& value) { return value; }
 
+  // for native array
+  template <typename T, size_t N1>
+  static Json to_json(T(&v)[N1])
+  {
+    static_assert(std::is_constructible_v<Json, T>, 
+                  "The type can not be converted to Json");
+    Json json = array_t{};
+    std::for_each(std::begin(v), std::end(v), [&json](const T& value) {
+      json.push_back(value);
+    });
+    return json;
+  }
+
+  template <typename T, size_t N1, size_t N2>
+  static Json to_json(T(&v)[N1][N2])
+  {
+    static_assert(std::is_constructible_v<Json, T>,
+                  "The type can not be converted to Json");
+    Json json = array_t{};
+    std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2]) {
+      json.push_back(to_json(v2));
+    });
+    return json;
+  }
+
+  template <typename T, size_t N1, size_t N2, size_t N3>
+  static Json to_json(T(&v)[N1][N2][N3])
+  {
+    static_assert(std::is_constructible_v<Json, T>,
+                  "The type can not be converted to Json");
+    Json json = array_t{};
+    std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2][N3]) {
+      json.push_back(to_json(v2));
+    });
+    return json;
+  }
+
+  template <typename T, size_t N1, size_t N2, size_t N3, size_t N4>
+  static Json to_json(T(&v)[N1][N2][N3][N4])
+  {
+    static_assert(std::is_constructible_v<Json, T>,
+                  "The type can not be converted to Json");
+    Json json = array_t{};
+    std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2][N3][N4]) {
+      json.push_back(to_json(v2));
+    });
+    return json;
+  }
+
+  template <typename T, size_t N1, size_t N2, size_t N3, size_t N4, size_t N5>
+  static Json to_json(T(&v)[N1][N2][N3][N4][N5])
+  {
+    static_assert(std::is_constructible_v<Json, T>,
+                  "The type can not be converted to Json");
+    Json json = array_t{};
+    std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2][N3][N4][N5]) {
+      json.push_back(to_json(v2));
+    });
+    return json;
+  }
+
   static Json to_json(std::initializer_list<Json> ilist);
 
   // --------------------------------------------------------------------------
@@ -179,6 +198,7 @@ class Json
   Json(int64_t);          // number
   Json(uint64_t);         // number
   Json(double);           // number
+  Json(char*);            // string
   Json(const char*);      // string
   Json(const string_t&);  // string
   Json(string_t&&);       // string
