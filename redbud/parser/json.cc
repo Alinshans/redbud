@@ -378,27 +378,32 @@ Json::Json(bool b)
 }
 
 Json::Json(int32_t n)
-  : node_(std::make_shared<JsonNumber>(n))
+  :node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(uint32_t n)
-  : node_(std::make_shared<JsonNumber>(n))
+  :node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(int64_t n)
-  : node_(std::make_shared<JsonNumber>(n))
+  :node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(uint64_t n)
-  : node_(std::make_shared<JsonNumber>(n))
+  :node_(std::make_shared<JsonNumber>(n))
 {
 }
 
 Json::Json(double d)
-  : node_(std::make_shared<JsonNumber>(d))
+  :node_(std::make_shared<JsonNumber>(d))
+{
+}
+
+Json::Json(char* sz)
+  :node_(std::make_shared<JsonString>(sz))
 {
 }
 
