@@ -23,6 +23,8 @@
 #include <initializer_list>  // initializer_list
 #include <type_traits>       // enable_if, 
 
+#include "../platform.h"
+
 namespace redbud
 {
 namespace parser
@@ -30,10 +32,59 @@ namespace parser
 namespace json
 {
 
+using std::size_t;
+using std::int32_t;
+using std::uint32_t;
+using std::int64_t;
+using std::uint64_t;
+
 // ============================================================================
 // Forward declaration
 
 class JsonValue;
+
+template <typename T, typename Ptr = T*, typename Ref = T&>
+struct __json_iterator
+{
+  using value_type = T;
+  using node_type = JsonValue;
+  using pointer = Ptr;
+  using const_pointer = const Ptr;
+  using reference = Ref;
+  using const_reference = const Ref;
+  using primary_iterator = __json_iterator<T, Ptr, Ref>;
+  using array_iterator = typename T::array_t::iterator;
+  using object_iterator = typename T::object_t::iterator;
+
+  node_type* node_;
+  node_type* begin_;
+  node_type* end_;
+
+  __json_iterator() {}
+  __json_iterator(node_type* n) :node_(n) {
+    if (n->type() == Json::Type::kJsonArray)
+    {
+      begin_ = n->get_array_safe().begin();
+      end_ = n->get_array_safe().end();
+    }
+    else if (n->type() == Json::Type::kJsonObject)
+    {
+      begin_ = n->get_object_safe().begin();
+      end_ = n->get_object_safe().end();
+    }
+    else
+    {
+      begin_ = n;
+      end_ = std::next(begin_);
+    }
+  }
+  __json_iterator(const primary_iterator& iter)
+    :node_(iter.node_), begin_(iter.begin_), end_(iter.end_)
+  {
+  }
+
+  reference operator*() const { return node_->; }
+};
 
 // ============================================================================
 // Json class
@@ -95,12 +146,22 @@ class Json
 
   // Decodes from a string, follows the rules of RFC 7159 and ECMA-404.
   // if parses failed, it will yield an exception.
+
   static Json parse(const string_t& json);
   static Json parse(string_t&& json);
 
-  template <typename T, typename = typename std::enable_if<
-    std::is_constructible<Json, T>::value, T>::type>
-  static Json to_json(const T& value) { return value; }
+  // Serializes any object that can be converted to Json to Json.
+
+#if REDBUD_HAS_CXX14
+  template <typename T, typename std::enable_if_t<
+    std::is_constructible_v<Json, T>, int> = 0>
+#else
+  template <typename T, typename std::enable_if<
+    std::is_constructible<Json, T>::value, int>::type = 0>
+#endif
+  static Json to_json(T&& value) { return value; }
+
+  static Json to_json(std::initializer_list<Json> ilist);
 
   // --------------------------------------------------------------------------
   // Constructor / Copy constructor / Move constructor / Destructor
@@ -127,17 +188,30 @@ class Json
   Json(object_t&&);       // object
 
   // Constructs form object-like container like std::map, std::unordered_map.
+#if REDBUD_HAS_CXX14
+  template <typename M, typename std::enable_if_t<
+    std::is_constructible_v<Json, typename M::key_type>
+    && std::is_constructible_v<Json, typename M::mapped_type>,
+    int> = 0>
+#else
   template <typename M, typename std::enable_if<
     std::is_constructible<Json, typename M::key_type>::value
     && std::is_constructible<Json, typename M::mapped_type>::value,
     int>::type = 0>
+#endif
   Json(const M& value) :Json(object_t(value.begin(), value.end())) {}
 
   // Constructs form array-like container like std::vector, std::list.
+#if REDBUD_HAS_CXX14
+  template <typename A, typename std::enable_if_t<
+    std::is_constructible_v<Json, typename A::value_type>,
+    int> = 0>
+#else
   template <typename A, typename std::enable_if<
     std::is_constructible<Json, typename A::value_type>::value,
     int>::type = 0>
-  Json(const A& value) : Json(array_t(value.begin(), value.end())) {}
+#endif
+  Json(const A& value) :Json(array_t(value.begin(), value.end())) {}
 
   Json(const Json&);
   Json(Json&&);
@@ -242,10 +316,18 @@ class Json
   // Resets this Json to null.
   void clear();
 
+  // Merges two Json into one, the other Json will be set to null
+  // after this operation.
+  //
+  // Some places should be noted and please see:
+  // https://github.com/Alinshans/redbud/blob/master/document/parser/json.md#merge-rule
+  Json& merge(Json& other);
+  Json& merge(Json&& other);
+
   // Serializes this JSON and saves the result in str.
   void dumps(string_t& str) const;
 
-  // Likes the previous one, returns a string type as the result.
+  // Likes the previous one, returns a string as the result.
   string_t dumps() const;
 
   // Passes in a string, and saves the parsed result in this Json.
@@ -280,6 +362,10 @@ class Json
   // Private member data and member functions.
 
  private:
+
+  // Helper functions for merge.
+  Json& _merge_array(Json&& other);
+  Json& _merge_object(Json&& other);
 
   // The following functions are designed for serialization.
   void _dumps_from(const Json& j, string_t& str) const;
