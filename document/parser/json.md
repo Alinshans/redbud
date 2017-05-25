@@ -18,7 +18,7 @@
   * [`operator[]` with a `JsonObject`](#operator-with-a-jsonobject)
   * [Merge rule](#merge-rule)
   * [Output format](#output-format)
-  * [Other](#other)
+  * [Runing-time exception](#runing-time-exception)
 
 ## Introduction
 
@@ -31,8 +31,7 @@ The type conversion table for JSON and C++ is as follow:
 |JSON | C++ |
 |:---:|:---:|
 | null | nullptr |
-| true | true |
-| false | false |
+| boolean | true/false |
 | number | int32_t/uint32_t/int64_t/uint64_t/double |
 | string | string |
 | array | vector |
@@ -86,7 +85,7 @@ Use the following static function to parse a Json from a string:
 
 You can encode easily with the `initializer_list`:
 ```c++
-Json j = {
+  Json j = {
     { "null", nullptr },
     { "bool",true },
     { "number", 1 },
@@ -162,14 +161,14 @@ to string / from string
 There are some places in this class to note:
 
 * The old version of JSON specified by the obsolete RFC 4627 required that the top-level value of a JSON text must be either a JSON object or array, and could not be a JSON null, boolean, number, or string value. **RFC 7159 removed that restriction**.
-* **Only supports UTF-8 for unicode**, please refer to the corresponding following instructions below for specific serialization / deserialization.
+* **Only supports UTF-8 for unicode**.
 * Not supports `NaN`, `Infinity` and `-Infinity` for number.
-* The RFC specifies that the keys within a JSON object should be unique, for repeated keys, the last value will override the previous value.
+* The `RFC 7159` specifies that the keys within a JSON object should be unique, for repeated keys, the last value will override the previous value.
 * The JSON object will be sorted according to the keys.
 
 ### initializer_list
 
-It can be use easily with `std::initializer_list`, as mentioned above. There are some places where you should pay attention to. You can create a Json with `std::initalizer_list`, and the type of this Json and its member, may be an array or an object. It is worth noting that the Json will be a `Json object` as much as possible. Here are a few cases:
+It can be used easily with `std::initializer_list` as mentioned above. There are some places where you should pay attention to. You can create a `Json` with `std::initalizer_list`, and the type of this `Json` may be an array or an object. When it can become an object or an array, it will give priority to the object. Here are a few cases:
 
 1. Uses braces without elements does not call the `std::initializer_list` constructor but call the default constructor, so if you writes code like these:
   ```c++
@@ -229,12 +228,12 @@ It can be use easily with `std::initializer_list`, as mentioned above. There are
   ```
   conforms to the format of a JSON object, and it will be treated as an object.
 
-6. You can explicitly declare the type, i.e., use `Json::array_t` or `Json::object_t`, to specify the type of JSON. This rule will cover the preceding rules. e.g.:
+6. You can explicitly declare the type, i.e., use `Json::array_t` or `Json::object_t` to specify the type of the `Json`. This rule will cover the preceding rules. e.g.:
   ```c++
     Json j = Json::array_t{{"this is an","array"}};
   ```
   `j` will be an array, and it has one element which is also an array, so if you
-  output it you will see: `[["this is an","array"]]`, That is what you want to see in the point 4.
+  output it you will see: `[["this is an","array"]]`, this is what you want to see in the point 4.
   
 
 The above is the rule of using braces(`std::initializer_list`), and they can be used in combination. The following is a complete example:
@@ -406,7 +405,7 @@ Here are some example:
   // {"key1":1,"key2":2}
 ```
 
-### Other
+### Runing-time exception
 
 When you use the function which is not applicable to all types, such as `as_xxx()`, `push_back()`, `insert()` and so on, make sure the type is correct, otherwise, it will yield an exception.
 
