@@ -57,14 +57,14 @@
 #define REDBUD_VERSION \
   REDBUD_STRING(REDBUD_MAJOR.REDBUD_MINOR.REDBUD_PATCH)
 
-#define _VERSION_CODE(x,y,z) \
+#define VERSION_CODE(x,y,z) \
   (((x)*100000) + ((y)*100) + (z))
 
 #define GNUC_VERSION \
-  _VERSION_CODE(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+  VERSION_CODE(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
 
 #define CLANG_VERSION \
-  _VERSION_CODE(__clang_major__, __clang_minor__, __clang_patchlevel__)
+  VERSION_CODE(__clang_major__, __clang_minor__, __clang_patchlevel__)
 
 // ----------------------------------------------------------------------------
 // redbud API
@@ -74,23 +74,35 @@
 #endif
 
 // ----------------------------------------------------------------------------
-// C++11 required
+// C++ features support
 
 #ifndef REDBUD_HAS_CXX11
   #if defined(REDBUD_MSVC) && (REDBUD_MSVC >= 1900)
     #define REDBUD_HAS_CXX11 1
-  #elif defined(REDBUD_GNUC) && (GNUC_VERSION >= _VERSION_CODE(4,8,0)) && \
+  #elif defined(REDBUD_GNUC) && (GNUC_VERSION >= VERSION_CODE(4,8,0)) && \
   defined(__GXX_EXPERIMENTAL_CXX0X__)
     #define REDBUD_HAS_CXX11 1
-  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= _VERSION_CODE(3,3,0))
+  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= VERSION_CODE(3,3,0))
     #define REDBUD_HAS_CXX11 1
   #else 
     #define REDBUD_HAS_CXX11 0
   #endif
 #endif // !REDBUD_HAS_CXX11
 
+#ifndef REDBUD_HAS_CXX14
+  #if defined(REDBUD_MSVC) && (REDBUD_MSVC >= 1910)
+    #define REDBUD_HAS_CXX14 1
+  #elif defined(REDBUD_GNUC) && (GNUC_VERSION >= VERSION_CODE(5,0,0))
+    #define REDBUD_HAS_CXX14 1
+  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= VERSION_CODE(3,4,0))
+    #define REDBUD_HAS_CXX14 1
+  #else
+    #define REDBUD_HAS_CXX14 0
+  #endif
+#endif // !REDBUD_HAS_CXX14
+
 #if REDBUD_HAS_CXX11 == 0
-  #error "C++11 required."
+  #error "At least need C++11 support."
 #endif
 
 // ----------------------------------------------------------------------------

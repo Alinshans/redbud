@@ -17,9 +17,8 @@
 
 #include "json_parser.h"
 #include "tokenizer.h"
-#include "../platform.h"
-#include "../math.h"
 #include "../exception.h"
+#include "../math.h"
 
 namespace redbud
 {
@@ -59,16 +58,6 @@ namespace json
 // ============================================================================
 // Base class : JsonValue
 
-// anonymous namespace
-namespace
-{
-
-// Distinguishs between lvalue and rvalue.
-struct rvalue {};
-struct lvalue {};
-
-}
-
 class JsonValue
 {
 
@@ -77,31 +66,31 @@ class JsonValue
   friend class Json;
 
   // Pure virtual functions.
-  virtual Json::Type  type() const = 0;
-  virtual size_t      size() const = 0;
+  virtual Json::Type    type() const = 0;
+  virtual size_t        size() const = 0;
 
   // Gets Json from JsonArray.
-  Json&               get_value_from_arr(size_t i);
-  const Json&         get_value_from_arr(size_t i) const;
+  Json&                 get_value_from_arr(size_t i);
+  const Json&           get_value_from_arr(size_t i) const;
 
   // Gets Json from JsonObject.
-  Json&               get_value_from_obj(const Json::string_t& key);
-  const Json&         get_value_from_obj(const Json::string_t& key) const;
+  Json&                 get_value_from_obj(const Json::string_t& key);
+  const Json&           get_value_from_obj(const Json::string_t& key) const;
 
   // If the types does not match, the corresponding instance
   // will be returned.
-  bool                get_bool_safe()   const;
-  double              get_double_safe() const;
-  const Json::string_t&  get_string_safe() const;
+  bool                  get_bool_safe()   const;
+  double                get_double_safe() const;
+  const Json::string_t& get_string_safe() const;
   const Json::array_t&  get_array_safe()  const;
   const Json::object_t& get_object_safe() const;
 
   // STL-like access.
-  template <typename T>
-  void push_back(T&& e);
+  void push_back(const Json::array_value_t& value);
+  void push_back(Json::array_value_t&& value);
   void pop_back();
-  void insert(const Json::object_value_t& p);
-  void insert(Json::object_value_t&& p);
+  void insert(const Json::object_value_t& pair);
+  void insert(Json::object_value_t&& pair);
   void erase(size_t i);
   void erase(const Json::string_t& key);
 
@@ -204,7 +193,7 @@ class JsonArray : public JsonValue
   JsonArray() = default;
   JsonArray(const Json::array_t& a) :value_(a) {}
   JsonArray(Json::array_t&& a) :value_(std::move(a)) {}
-  JsonArray(const std::initializer_list<Json>& ilist)
+  JsonArray(std::initializer_list<Json> ilist)
     :value_(ilist.begin(), ilist.end())
   {
   }
@@ -230,8 +219,8 @@ class JsonObject : public JsonValue
   JsonObject() = default;
   JsonObject(const Json::object_t& o) :value_(o) {}
   JsonObject(Json::object_t&& o) :value_(std::move(o)) {}
-  JsonObject(const std::initializer_list<
-             std::pair<Json::string_t, Json>>& ilist)
+  JsonObject(std::initializer_list<
+             std::pair<Json::string_t, Json>> ilist)
     :value_(ilist.begin(), ilist.end())
   {
   }
@@ -303,11 +292,16 @@ const Json::object_t& JsonValue::get_object_safe() const
   return static_cast<const JsonObject&>(*this).value_;
 }
 
-template <typename T>
-void JsonValue::push_back(T&& e)
+void JsonValue::push_back(const Json::array_value_t& value)
 {
   auto& arr = static_cast<JsonArray&>(*this).value_;
-  arr.push_back(std::forward<T>(e));
+  arr.push_back(value);
+}
+
+void JsonValue::push_back(Json::array_value_t&& value)
+{
+  auto& arr = static_cast<JsonArray&>(*this).value_;
+  arr.push_back(std::move(value));
 }
 
 void JsonValue::pop_back()
@@ -358,6 +352,11 @@ Json Json::parse(const Json::string_t& json_text)
 Json Json::parse(Json::string_t&& json_text)
 {
   return JsonParser::parse(std::move(json_text));
+}
+
+Json Json::to_json(std::initializer_list<Json> ilist)
+{
+  return ilist;
 }
 
 // ----------------------------------------------------------------------------
@@ -710,7 +709,41 @@ void Json::erase(const Json::string_t& key)
 
 void Json::clear()
 {
-  *this = Json{};
+  node_.reset(new JsonNull);
+}
+
+Json& Json::merge(Json& other)
+{
+  return merge(std::move(other));
+}
+
+Json& Json::merge(Json&& other)
+{
+  if (other.type() == Type::kJsonNull)
+  {
+    return *this;
+  }
+  if (type() == Type::kJsonNull)
+  {
+    *this = std::move(other);
+    other.clear();
+    return *this;
+  }
+  if (type() != Type::kJsonArray && type() != Type::kJsonObject
+      && other.type() != Type::kJsonArray && other.type() != Type::kJsonObject)
+  {
+    Json tmp = array_t{};
+    tmp.push_back(std::move(*this));
+    tmp.push_back(std::move(other));
+    *this = std::move(tmp);
+    other.clear();
+    return *this;
+  }
+  if (type() == Type::kJsonObject && other.type() == Type::kJsonObject)
+  {
+    return _merge_object(std::move(other));
+  }
+  return _merge_array(std::move(other));
 }
 
 // ----------------------------------------------------------------------------
@@ -745,6 +778,10 @@ void Json::loads(Json::string_t&& str)
 
 void Json::print(PrintType t, size_t ind) const
 {
+  if (node_.use_count() == 0)
+  {
+    return;
+  }
   switch (type())
   {
     case Type::kJsonNull:
@@ -774,6 +811,53 @@ void Json::print(PrintType t, size_t ind) const
 
 // ============================================================================
 // Helper functions.
+
+// Merges with another Json.
+
+Json& Json::_merge_array(Json&& other)
+{
+  if (type() == Type::kJsonArray && other.type() == Type::kJsonArray)
+  {
+    for (size_t i = 0; i < other.size(); ++i)
+    {
+      push_back(std::move(other[i]));
+    }
+  }
+  else if (type() == Type::kJsonArray)
+  {
+    push_back(std::move(other));
+  }
+  else if (other.type() == Type::kJsonArray)
+  {
+    Json tmp = array_t{};
+    tmp.push_back(std::move(*this));
+    for (size_t i = 0; i < other.size(); ++i)
+    {
+      tmp.push_back(std::move(other[i]));
+    }
+    *this = std::move(tmp);
+  }
+  else
+  {
+    Json tmp = array_t{};
+    tmp.push_back(std::move(*this));
+    tmp.push_back(std::move(other));
+    *this = std::move(tmp);
+  }
+  other.clear();
+  return *this;
+}
+
+Json& Json::_merge_object(Json&& other)
+{
+  auto&& obj = other.as_object();
+  for (auto&& value : obj)
+  {
+    insert(std::move(value));
+  }
+  other.clear();
+  return *this;
+}
 
 // Serialization.
 
