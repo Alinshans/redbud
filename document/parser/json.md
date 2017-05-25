@@ -16,6 +16,7 @@
 * [Notes](#notes)
   * [initializer_list](#initializer_list)
   * [`operator[]` with a `JsonObject`](#operator-with-a-jsonobject)
+  * [Merge rule](#merge-rule)
   * [Output format](#output-format)
   * [Other](#other)
 
@@ -336,6 +337,73 @@ you will see:
     1
   ]
 ]
+```
+
+### Merge rule
+
+The function of `Json::merge`, is merging the other one into the caller, and the other one will be set to `null`(which has a kJsonNull type). And here are some rule of the result after merging:
+
+* As long as there is a type of `kJsonNull`, the type of result is same as the other one:
+
+| caller type | merge type | result type |
+|:-----------:|:----------:|:-----------:|
+| kJsonNull   | some type  | some type   |
+| some type   | kJsonNull  | some type   |
+| kJsonNull   | kJsonNull  | kJsonNull   | 
+
+* The type of both sides is neither `kJsonArray` nor `kJsonObject`, the type of result is a `kJsonArray` and the result has two elements, the first one is the caller `Json`, and the second one is the other `Json`.
+
+* The type of both sides is `kJsonObject`, they will be merged into an object, which has all the elements of both sides.
+
+* At least one party is a `kJsonArray`, they will be merged into an array, the elements in front of the array is the caller's.
+
+* Other cases they will be merged into an array, and the same as `rule 2`, the array has two elements.
+
+Here are some example:
+```c++
+  // rule 1
+  Json j1;
+  Json j2 = 1;
+  j1.merge(j2);
+  std::cout << j1 << "\n";
+  // 1
+
+  // rule 2
+  j2 = true;
+  j1.merge(j2);
+  std::cout << j1 << "\n";
+  // [1,true]
+
+  // rule 4
+  j2 = Json::array_t{ "a","b","c" };
+  j1.merge(j2);
+  std::cout << j1 << "\n";
+  // [1,true,"a","b","c"]
+
+  // rule 4
+  Json j3 = 0;
+  j3.merge(j1);
+  std::cout << j3 << "\n";
+  // [0,1,true,"a","b","c"]
+
+  // rule 3
+  j1 = {
+    {"object",true}
+  };
+  j3.merge(j1);
+  std::cout << j3 << "\n";
+  // [0,1,true,"a","b","c",{"object":true}]
+
+  // rule 3
+  Json j4 = {
+    {"key1",1}
+  };
+  Json j5 = {
+    {"key2",2}
+  };
+  j4.merge(j5);
+  std::cout << j4 << "\n";
+  // {"key1":1,"key2":2}
 ```
 
 ### Other
