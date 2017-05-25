@@ -1,4 +1,4 @@
-![Redbud](http://i1.piimg.com/594413/9f01ee5a73debe8f.jpg)
+![Markdown](http://i1.piimg.com/594413/9f01ee5a73debe8fs.jpg)
 
 ## Introduction
 
