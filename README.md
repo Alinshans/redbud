@@ -1,8 +1,10 @@
-![Markdown](http://i1.piimg.com/594413/9f01ee5a73debe8fs.jpg)
+![Redbud](http://i1.piimg.com/594413/9f01ee5a73debe8fs.jpg)
+
+[简体中文](https://github.com/Alinshans/redbud/blob/master/README-zh.md)    [English](https://github.com/Alinshans/redbud/blob/master/README.md)
 
 ## Introduction
 
-***Redbud*** is a general modern library of C++, It covers things in many aspects. It does not expect to be the best performer, but wants to be one of the easiest one to use.
+***Redbud*** is a general modern library of C++, It covers things in many aspects. It does not expect to be the best performer, but wants to be one of the easiest one to use. So it's design goal is: **esay interface, hard to make mistakes, comprehensive and general**.
 
 ## Featrue
 
