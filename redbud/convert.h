@@ -16,7 +16,9 @@
 #include <string>      // string, to_string
 #include <limits>      // numeric_limits
 #include <utility>     // forward
-#include <type_traits> // enable_if, is_arithmetic, is_same
+
+#include "__undef_minmax.h"
+#include "type_traits.h"
 
 namespace redbud
 {
@@ -24,7 +26,7 @@ namespace redbud
 // ============================================================================
 // String conversion.
 //
-// This part contains two templates: ToString, SpliceString.
+// This part contains two templates: toString, spliceString.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
@@ -45,60 +47,60 @@ namespace redbud
 // ----------------------------------------------------------------------------
 
 // Unknown type.
-template <typename T, typename = typename std::enable_if<
-  !std::is_arithmetic<T>::value, T>::type>
-inline std::string ToString(T&& value)
+template <typename T, typename = std::enable_if_t<
+  !std::is_arithmetic_v<T>, T>>
+inline std::string toString(T&& value)
 {
   return "[?]";
 }
 
 // For std::string.
-inline std::string ToString(const std::string& s)
+inline std::string toString(const std::string& s)
 {
   return s;
 }
 
 // For const char*.
-inline std::string ToString(const char* s)
+inline std::string toString(const char* s)
 {
   return std::string(s);
 }
 
 // For char[].
-inline std::string ToString(char s[])
+inline std::string toString(char s[])
 {
   return std::string(s, s + strlen(s));
 }
 
 // For char / signed char / unsigned char.
-inline std::string ToString(char c)
+inline std::string toString(char c)
 {
   return std::string(1, c);
 }
 
-inline std::string ToString(signed char c)
+inline std::string toString(signed char c)
 {
   return std::string(1, c);
 }
 
-inline std::string ToString(unsigned char c)
+inline std::string toString(unsigned char c)
 {
   return std::string(1, c);
 }
 
 // For bool type.
-inline std::string ToString(bool x)
+inline std::string toString(bool x)
 {
   return x ? std::string("true") : std::string("false");
 }
 
 // For integral type / floating type.
-template <typename T, typename = typename std::enable_if<
-  std::is_arithmetic<T>::value &&
-  !std::is_same<wchar_t, T>::value &&
-  !std::is_same<char16_t, T>::value &&
-  !std::is_same<char32_t, T>::value, T>::type>
-inline std::string ToString(T n)
+template <typename T, typename = std::enable_if_t<
+  std::is_arithmetic_v<T> &&
+  !std::is_same_v<wchar_t, T> &&
+  !std::is_same_v<char16_t, T> &&
+  !std::is_same_v<char32_t, T>, T>>
+inline std::string toString(T n)
 {
   return std::to_string(n);
 }
@@ -106,28 +108,28 @@ inline std::string ToString(T n)
 // ----------------------------------------------------------------------------
 // Converts all the parameters to std::string and splices them.
 // 
-// The conversion of parameters to string uses redbud::ToString.
+// The conversion of parameters to string uses redbud::toString.
 //
 // Example:
-//   std::string str = SpliceString(1, '>', 0, " is ", 1 > 0);
+//   std::string str = spliceString(1, '>', 0, " is ", 1 > 0);
 //   std::cout << str;  // "1>0 is true"
 // ----------------------------------------------------------------------------
-inline std::string SpliceString()
+inline std::string spliceString()
 {
   return std::string{};
 }
 
 template <typename First>
-inline std::string SpliceString(First&& str)
+inline std::string spliceString(First&& str)
 {
-  return ToString(std::forward<First>(str));
+  return toString(std::forward<First>(str));
 }
 
 template <typename First, typename ...Args>
-std::string SpliceString(First&& str, Args&& ...args)
+std::string spliceString(First&& str, Args&& ...args)
 {
-  return ToString(std::forward<First>(str)) + 
-         SpliceString(std::forward<Args>(args)...);
+  return toString(std::forward<First>(str)) + 
+         spliceString(std::forward<Args>(args)...);
 }
 
 // ============================================================================
@@ -147,32 +149,31 @@ std::string SpliceString(First&& str, Args&& ...args)
 //   auto a3 = static_cast<uint32_t>(-1);              // a3 = 4294967295
 //   auto a4 = integer_cast_safe<uint32_t>(-1);        // a4 = 0
 // ----------------------------------------------------------------------------
-template <typename Target, typename Origin>
-Target integer_cast_safe(Origin value)
+template <typename To, typename From>
+To integer_cast_safe(From value)
 {
-  static_assert(std::is_integral<Target>::value &&
-                std::is_integral<Origin>::value, 
-                "Integer type required");
-  if (std::numeric_limits<Origin>::digits > 
-      std::numeric_limits<Target>::digits)
-  { // Bits of Origin is larger than bits of Target, or
-    // Origin is unsigned type and Target is opposite.
-    if (value > static_cast<Origin>(std::numeric_limits<Target>::max()))
+  static_assert(std::is_integral_v<To> &&
+                std::is_integral_v<From>, 
+                "integer type required");
+  if (std::numeric_limits<From>::digits > std::numeric_limits<To>::digits)
+  { // Bits of From is larger than bits of To, or
+    // From is unsigned type and To is opposite.
+    if (value > static_cast<From>(std::numeric_limits<To>::max()))
     {
-      return std::numeric_limits<Target>::max();
+      return std::numeric_limits<To>::max();
     }
-    if (std::is_signed<Origin>::value &&
-        value < static_cast<Origin>(std::numeric_limits<Target>::min()))
+    if (std::is_signed_v<From> &&
+        value < static_cast<From>(std::numeric_limits<To>::min()))
     {
-      return std::numeric_limits<Target>::min();
+      return std::numeric_limits<To>::min();
     }
-    return static_cast<Target>(value);
+    return static_cast<To>(value);
   }
-  else if (std::is_unsigned<Target>::value && value < 0)
+  else if (std::is_unsigned_v<To> && value < 0)
   {
     return 0;
   }
-  return static_cast<Target>(value);
+  return static_cast<To>(value);
 }
 
 // ----------------------------------------------------------------------------
@@ -184,25 +185,25 @@ Target integer_cast_safe(Origin value)
 //   auto a3 = static_cast<float>(-5.20e+99);     // a3 = -inf
 //   auto a4 = float_cast_safe<float>(-5.20e+99); // a4 = -3.40282e+38
 // ----------------------------------------------------------------------------
-template <typename Target, typename Origin>
-Target float_cast_safe(Origin value)
+template <typename To, typename From>
+To float_cast_safe(From value)
 {
-  static_assert(std::is_floating_point<Target>::value &&
-                std::is_floating_point<Origin>::value,
-                "Float type required");
-  if (std::numeric_limits<Origin>::digits > 
-      std::numeric_limits<Target>::digits)
+  static_assert(std::is_floating_point_v<To> 
+                && std::is_floating_point_v<From>,
+                "float type required");
+  if (std::numeric_limits<From>::digits > 
+      std::numeric_limits<To>::digits)
   {
-    if (value > std::numeric_limits<Target>::max())
+    if (value > std::numeric_limits<To>::max())
     {
-      return std::numeric_limits<Target>::max();
+      return std::numeric_limits<To>::max();
     }
-    if (value < std::numeric_limits<Target>::lowest())
+    if (value < std::numeric_limits<To>::lowest())
     {
-      return std::numeric_limits<Target>::lowest();
+      return std::numeric_limits<To>::lowest();
     }
   }
-  return static_cast<Target>(value);
+  return static_cast<To>(value);
 }
 
 } // namespace redbud

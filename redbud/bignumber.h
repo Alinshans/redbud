@@ -17,10 +17,10 @@
 #include <string>      // string
 #include <utility>     // move
 #include <limits>      // numeric_limits
-#include <type_traits> // enable_if, is_same
 
 #include "math.h"
 #include "exception.h"
+#include "type_traits.h"
 
 namespace redbud
 {
@@ -117,14 +117,9 @@ class BigInteger
   // really need that, then use explicit cast:
   //   char ch = 'A';
   //   BigInteger b(static_cast<int>(ch));
-  template <typename T, typename = typename std::enable_if<
-    std::is_integral<T>::value ||
-    !std::is_same<bool, T>::value &&
-    !std::is_same<char, T>::value &&
-    !std::is_same<char16_t, T>::value &&
-    !std::is_same<char32_t, T>::value &&
-    !std::is_same<wchar_t, T>::value, T>::type>
-  BigInteger(T n);
+  template <typename T, typename = std::enable_if_t<
+    is_real_integer<T>, T>>
+  BigInteger(const T& n);
 
   // Constructs with a string.
   BigInteger(const char* s);
@@ -334,7 +329,7 @@ class BigInteger
 // Template implementation.
 
 template <typename T, typename U>
-BigInteger::BigInteger(T n)
+BigInteger::BigInteger(const T& n)
 {
   _integer_init(static_cast<uint64_t>(
     redbud::safe_abs(n)), n < 0 ? kNegative : kPositive);
