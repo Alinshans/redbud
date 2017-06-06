@@ -80,9 +80,10 @@
   #if defined(REDBUD_MSVC) && (REDBUD_MSVC >= 1900)
     #define REDBUD_HAS_CXX11 1
   #elif defined(REDBUD_GNUC) && (GNUC_VERSION >= VERSION_CODE(4,8,0)) && \
-  defined(__GXX_EXPERIMENTAL_CXX0X__)
+  (__cplusplus >= 201103L)
     #define REDBUD_HAS_CXX11 1
-  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= VERSION_CODE(3,3,0))
+  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= VERSION_CODE(3,3,0)) && \
+  (__cplusplus >= 201103L)
     #define REDBUD_HAS_CXX11 1
   #else 
     #define REDBUD_HAS_CXX11 0
@@ -92,9 +93,11 @@
 #ifndef REDBUD_HAS_CXX14
   #if defined(REDBUD_MSVC) && (REDBUD_MSVC >= 1910)
     #define REDBUD_HAS_CXX14 1
-  #elif defined(REDBUD_GNUC) && (GNUC_VERSION >= VERSION_CODE(5,0,0))
+  #elif defined(REDBUD_GNUC) && (GNUC_VERSION >= VERSION_CODE(5,0,0)) && \
+  (__cplusplus >= 201402L)
     #define REDBUD_HAS_CXX14 1
-  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= VERSION_CODE(3,4,0))
+  #elif defined(REDBUD_CLANG) && (CLANG_VERSION >= VERSION_CODE(3,4,0)) && \
+  (__cplusplus >= 201402L)
     #define REDBUD_HAS_CXX14 1
   #else
     #define REDBUD_HAS_CXX14 0
@@ -104,17 +107,5 @@
 #if REDBUD_HAS_CXX11 == 0
   #error "At least need C++11 support."
 #endif
-
-// ----------------------------------------------------------------------------
-// Undefines macro min and max in MSVC.
-
-namespace redbud
-{
-
-#if REDBUD_MSVC
-  #define NOMINMAX
-#endif
-
-}
 
 #endif // !ALINSHANS_REDBUD_PLATFORM_H_

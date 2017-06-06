@@ -22,9 +22,9 @@
 #include <memory>            // shared_ptr
 #include <utility>           // pair, move, forward
 #include <initializer_list>  // initializer_list
-#include <type_traits>       // enable_if, is_constructible, 
 
 #include "../platform.h"
+#include "../type_traits.h"
 
 namespace redbud
 {
@@ -110,13 +110,8 @@ class Json
 
   // Serializes any object that can be converted to Json to Json.
 
-#if REDBUD_HAS_CXX14
   template <typename T, typename std::enable_if_t<
     std::is_constructible_v<Json, T>, int> = 0>
-#else
-  template <typename T, typename std::enable_if<
-    std::is_constructible<Json, T>::value, int>::type = 0>
-#endif
   static Json to_json(T&& value) { return value; }
 
   // for native array
@@ -124,7 +119,7 @@ class Json
   static Json to_json(T(&v)[N1])
   {
     static_assert(std::is_constructible_v<Json, T>, 
-                  "The type can not be converted to Json");
+                  "the type can not be converted to Json");
     Json json = array_t{};
     std::for_each(std::begin(v), std::end(v), [&json](const T& value) {
       json.push_back(value);
@@ -136,7 +131,7 @@ class Json
   static Json to_json(T(&v)[N1][N2])
   {
     static_assert(std::is_constructible_v<Json, T>,
-                  "The type can not be converted to Json");
+                  "the type can not be converted to Json");
     Json json = array_t{};
     std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2]) {
       json.push_back(to_json(v2));
@@ -148,7 +143,7 @@ class Json
   static Json to_json(T(&v)[N1][N2][N3])
   {
     static_assert(std::is_constructible_v<Json, T>,
-                  "The type can not be converted to Json");
+                  "the type can not be converted to Json");
     Json json = array_t{};
     std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2][N3]) {
       json.push_back(to_json(v2));
@@ -160,7 +155,7 @@ class Json
   static Json to_json(T(&v)[N1][N2][N3][N4])
   {
     static_assert(std::is_constructible_v<Json, T>,
-                  "The type can not be converted to Json");
+                  "the type can not be converted to Json");
     Json json = array_t{};
     std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2][N3][N4]) {
       json.push_back(to_json(v2));
@@ -172,7 +167,7 @@ class Json
   static Json to_json(T(&v)[N1][N2][N3][N4][N5])
   {
     static_assert(std::is_constructible_v<Json, T>,
-                  "The type can not be converted to Json");
+                  "the type can not be converted to Json");
     Json json = array_t{};
     std::for_each(std::begin(v), std::end(v), [&json](T(&v2)[N2][N3][N4][N5]) {
       json.push_back(to_json(v2));
@@ -180,6 +175,7 @@ class Json
     return json;
   }
 
+  // for initializer_list
   static Json to_json(std::initializer_list<Json> ilist);
 
   // --------------------------------------------------------------------------
@@ -208,29 +204,16 @@ class Json
   Json(object_t&&);       // object
 
   // Constructs form object-like container like std::map, std::unordered_map.
-#if REDBUD_HAS_CXX14
   template <typename M, typename std::enable_if_t<
     std::is_constructible_v<Json, typename M::key_type>
     && std::is_constructible_v<Json, typename M::mapped_type>,
     int> = 0>
-#else
-  template <typename M, typename std::enable_if<
-    std::is_constructible<Json, typename M::key_type>::value
-    && std::is_constructible<Json, typename M::mapped_type>::value,
-    int>::type = 0>
-#endif
   Json(const M& value) :Json(object_t(value.begin(), value.end())) {}
 
   // Constructs form array-like container like std::vector, std::list.
-#if REDBUD_HAS_CXX14
   template <typename A, typename std::enable_if_t<
     std::is_constructible_v<Json, typename A::value_type>,
     int> = 0>
-#else
-  template <typename A, typename std::enable_if<
-    std::is_constructible<Json, typename A::value_type>::value,
-    int>::type = 0>
-#endif
   Json(const A& value) :Json(array_t(value.begin(), value.end())) {}
 
   Json(const Json&);

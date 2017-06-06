@@ -13,9 +13,10 @@
 #include <stdint.h>
 
 #include <limits>
-#include <type_traits>
 
+#include "__undef_minmax.h"
 #include "platform.h"
+#include "type_traits.h"
 
 namespace redbud
 {
@@ -44,7 +45,7 @@ namespace redbud
 namespace details
 {
 
-// Get the return type of safe_abs:
+// Gets the return type of safe_abs:
 //   bool          -> bool
 //   float type    -> float type
 //   unsigned type -> unsigned type
@@ -57,7 +58,7 @@ struct abs_return_type
 template <typename T>
 struct abs_return_type<true, T>
 {
-  typedef typename std::make_unsigned<T>::type type;
+  typedef std::make_unsigned_t<T> type;
 };
 
 template <typename T>
@@ -79,9 +80,9 @@ using return_t = typename abs_return_type<
 
 // For signed type.
 template <typename T>
-details::return_t<T> _safe_abs(T n, std::true_type)
+details::return_t<T> __safe_abs(T n, std::true_type)
 {
-  if (std::is_floating_point<T>::value)
+  if (std::is_floating_point_v<T>)
   { // Floating point number.
     return n < 0.0 ? -n : n;
   }
@@ -97,7 +98,7 @@ details::return_t<T> _safe_abs(T n, std::true_type)
 
 // For unsigned type.
 template <typename T>
-details::return_t<T> _safe_abs(T n, std::false_type)
+details::return_t<T> __safe_abs(T n, std::false_type)
 {
   return n;
 }
@@ -105,9 +106,8 @@ details::return_t<T> _safe_abs(T n, std::false_type)
 template <typename T>
 details::return_t<T> safe_abs(T n)
 {
-  static_assert(std::is_arithmetic<T>::value,
-                "Arithmetic type required");
-  return _safe_abs(n, std::is_signed<T>());
+  static_assert(std::is_arithmetic_v<T>, "arithmetic type required");
+  return __safe_abs(n, std::is_signed<T>());
 }
 
 #if defined(REDBUD_MSVC)
