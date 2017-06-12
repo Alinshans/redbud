@@ -638,7 +638,7 @@ bool Json::empty() const
   return size() == 0;
 }
 
-bool Json::has_key(const Json::string_t& key)
+bool Json::has_key(const Json::string_t& key) const
 {
   EXPECT_OBJECT;
   auto&& obj = as_object();

@@ -22,9 +22,9 @@
 #include <memory>            // shared_ptr
 #include <utility>           // pair, move, forward
 #include <initializer_list>  // initializer_list
+#include <type_traits>
 
 #include "../platform.h"
-#include "../type_traits.h"
 
 namespace redbud
 {
@@ -206,14 +206,12 @@ class Json
   // Constructs form object-like container like std::map, std::unordered_map.
   template <typename M, typename std::enable_if_t<
     std::is_constructible_v<Json, typename M::key_type>
-    && std::is_constructible_v<Json, typename M::mapped_type>,
-    int> = 0>
+    && std::is_constructible_v<Json, typename M::mapped_type>, int> = 0>
   Json(const M& value) :Json(object_t(value.begin(), value.end())) {}
 
   // Constructs form array-like container like std::vector, std::list.
   template <typename A, typename std::enable_if_t<
-    std::is_constructible_v<Json, typename A::value_type>,
-    int> = 0>
+    std::is_constructible_v<Json, typename A::value_type>, int> = 0>
   Json(const A& value) :Json(array_t(value.begin(), value.end())) {}
 
   Json(const Json&);
@@ -296,8 +294,8 @@ class Json
   // True if size() == 0.
   bool empty() const;
 
-  // True if a Json value has the key.
-  bool has_key(const string_t& key);
+  // True if the Json has the key, only for JSON object.
+  bool has_key(const string_t& key) const;
 
   // Inserts a Json value, only for JSON array.
   void push_back(const array_value_t& element);

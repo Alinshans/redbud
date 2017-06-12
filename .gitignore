@@ -39,6 +39,9 @@ bld/
 *.VisualState.xml
 TestResult.xml
 
+# My test
+redbud/test.cpp
+
 # Build Results of an ATL Project
 [Dd]ebugPS/
 [Rr]eleasePS/

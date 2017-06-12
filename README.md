@@ -1,19 +1,28 @@
-![Redbud](http://i1.piimg.com/594413/9f01ee5a73debe8f.jpg)
+![Redbud](http://i1.buimg.com/594413/431243f241b31a93s.png)
 
 ## Introduction
 
-***Redbud*** is a general modern library of C++, It covers things in many aspects. It does not expect to be the best performer, but wants to be one of the easiest one to use.
+***Redbud*** is a personal library of modern C++. It does not expect to be the best performer, but wants to be one of the easiest one to use.
 
-## Featrue
+## Design goals
 
-* Cross-platform / Cross-compiler
-* Covering a wide range
-* Easy-to-use's API
+* Write it cool
+* Use it cool
+* Use the latest standards
+
+## Sopport
+
+* vs2017
+* gcc 6
+* clang 3.8
 
 ## Why redbud
 
-Because the university I'm now studying at is [South China Agricultural University](https://zh.wikipedia.org/zh-hans/%E5%8D%8E%E5%8D%97%E5%86%9C%E4%B8%9A%E5%A4%A7%E5%AD%A6), the most famous thing of my school is `China redbud`, the code was written during my college year. This is the origin of `redbud`.
+Because the university I'm now studying at is [South China Agricultural University](https://zh.wikipedia.org/zh-hans/%E5%8D%8E%E5%8D%97%E5%86%9C%E4%B8%9A%E5%A4%A7%E5%AD%A6), the most famous thing of my school is `China redbud`, these codes was written during my college year. This is the origin of `redbud`.
 
-## Join
+## Contribute
 
-Originally, I wrote these codes for my own use, at the same time, I also hope that more and more people can **join, contribute, and benefit from it**. So if you are willing to contribute to its growth with me, please contact me(13925588730@163.com), I will be very happy and grateful.
+Originally, I wrote these codes for my own use, at the same time, I also hope that more people can **contribute, and benefit from it**. So if you have any ideas or suggestions, you can [open an issue](https://github.com/Alinshans/redbud/issues) or [pull requests](https://github.com/Alinshans/redbud/pulls), I will be very happy and grateful.
+
+--------------------------------
+
