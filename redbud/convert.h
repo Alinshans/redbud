@@ -10,9 +10,9 @@
 #ifndef ALINSHANS_REDBUD_CONVERT_H_
 #define ALINSHANS_REDBUD_CONVERT_H_
 
-#include <stdint.h>
-
 #include <cstring>     // strlen
+
+#include <algorithm>   // for_each
 #include <string>      // string, to_string
 #include <limits>      // numeric_limits
 #include <utility>     // forward
@@ -47,62 +47,87 @@ namespace redbud
 // ----------------------------------------------------------------------------
 
 // Unknown type.
-template <typename T, typename = std::enable_if_t<
-  !std::is_arithmetic_v<T>, T>>
-inline std::string toString(T&& value)
+template <typename T, typename std::enable_if_t<
+  !std::is_arithmetic_v<T> &&
+  !std::is_constructible_v<std::string, T>, int> = 0>
+std::string toString(const T& value)
 {
   return "[?]";
 }
 
-// For std::string.
-inline std::string toString(const std::string& s)
+// For std::string, const char*.
+template <typename T, typename std::enable_if_t<
+  std::is_constructible_v<std::string, T> &&
+  !std::is_array_v<T>, int> = 0>
+std::string toString(const T& value)
 {
-  return s;
-}
-
-// For const char*.
-inline std::string toString(const char* s)
-{
-  return std::string(s);
-}
-
-// For char[].
-inline std::string toString(char s[])
-{
-  return std::string(s, s + strlen(s));
-}
-
-// For char / signed char / unsigned char.
-inline std::string toString(char c)
-{
-  return std::string(1, c);
-}
-
-inline std::string toString(signed char c)
-{
-  return std::string(1, c);
-}
-
-inline std::string toString(unsigned char c)
-{
-  return std::string(1, c);
+  return std::string{ value };
 }
 
 // For bool type.
-inline std::string toString(bool x)
+template <typename T, typename std::enable_if_t<
+  std::is_same_v<bool, T>, int> = 0>
+std::string toString(T x)
 {
-  return x ? std::string("true") : std::string("false");
+  return x ? "true" : "false";
 }
 
-// For integral type / floating type.
-template <typename T, typename = std::enable_if_t<
-  std::is_arithmetic_v<T> &&
-  !std::is_same_v<wchar_t, T> &&
-  !std::is_same_v<char16_t, T> &&
-  !std::is_same_v<char32_t, T>, T>>
-inline std::string toString(T n)
+// For char type.
+template <typename T, typename std::enable_if_t<
+  is_char_e<T>, int> = 0>
+std::string toString(T c)
+{
+  return std::string(1, c);
+}
+
+// For integral type.
+template <typename T, typename std::enable_if_t<
+  is_integer_e<T>, int> = 0>
+std::string toString(T n)
 {
   return std::to_string(n);
+}
+
+// For floating type.
+template <typename T, typename std::enable_if_t<
+  std::is_floating_point_v<T>, int> = 0>
+  std::string toString(T n)
+{
+  char buf[22];
+  if (std::is_same_v<float, T>)
+  {
+    std::snprintf(buf, sizeof(buf), "%.6g", n);
+  }
+  else
+  {
+    std::snprintf(buf, sizeof(buf), "%.15g", n);
+  }
+  return std::string{ buf };
+}
+
+// For raw array.
+template <typename T, std::size_t N, typename std::enable_if_t<
+  is_char_e<T>, int> = 0>
+std::string toString(T (&v)[N])
+{
+  std::string res;
+  res.reserve(N + 1);
+  std::for_each(std::begin(v), std::end(v), [&res](const T& e) {
+    res.append(std::string(1, e));
+  });
+  return res;
+}
+
+template <typename T, std::size_t N, typename std::enable_if_t<
+  is_integer_e<T> || std::is_floating_point_v<T>, int> = 0>
+std::string toString(T (&v)[N])
+{
+  std::string res;
+  res.reserve(N + 1);
+  std::for_each(std::begin(v), std::end(v), [&res](const T& e) {
+    res.append(toString(std::forward<decltype(e)>(e)));
+  });
+  return res;
 }
 
 // ----------------------------------------------------------------------------
@@ -120,7 +145,7 @@ inline std::string spliceString()
 }
 
 template <typename First>
-inline std::string spliceString(First&& str)
+std::string spliceString(First&& str)
 {
   return toString(std::forward<First>(str));
 }
@@ -152,8 +177,7 @@ std::string spliceString(First&& str, Args&& ...args)
 template <typename To, typename From>
 To integer_cast_safe(From value)
 {
-  static_assert(std::is_integral_v<To> &&
-                std::is_integral_v<From>, 
+  static_assert(std::is_integral_v<To> && std::is_integral_v<From>, 
                 "integer type required");
   if (std::numeric_limits<From>::digits > std::numeric_limits<To>::digits)
   { // Bits of From is larger than bits of To, or
@@ -188,8 +212,7 @@ To integer_cast_safe(From value)
 template <typename To, typename From>
 To float_cast_safe(From value)
 {
-  static_assert(std::is_floating_point_v<To> 
-                && std::is_floating_point_v<From>,
+  static_assert(std::is_floating_point_v<To> && std::is_floating_point_v<From>,
                 "float type required");
   if (std::numeric_limits<From>::digits > 
       std::numeric_limits<To>::digits)

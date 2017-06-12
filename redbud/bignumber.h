@@ -118,7 +118,7 @@ class BigInteger
   //   char ch = 'A';
   //   BigInteger b(static_cast<int>(ch));
   template <typename T, typename = std::enable_if_t<
-    is_real_integer<T>, T>>
+    is_integer_e<T>, T>>
   BigInteger(const T& n);
 
   // Constructs with a string.
@@ -153,13 +153,9 @@ class BigInteger
  public:
 
   bool is_positive() const;
-
   bool is_negative() const;
-
   bool is_zero()     const;
-
   bool is_odd()      const;
-
   bool is_even()     const;
 
   // Compare to another BigInteger, return 1 if greater than another

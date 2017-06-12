@@ -11,12 +11,11 @@
 #define ALINSHANS_REDBUD_MATH_H_
 
 #include <stdint.h>
-
+#include <type_traits>
 #include <limits>
 
 #include "__undef_minmax.h"
 #include "platform.h"
-#include "type_traits.h"
 
 namespace redbud
 {
@@ -50,28 +49,21 @@ namespace details
 //   float type    -> float type
 //   unsigned type -> unsigned type
 //   signed type   -> unsigned type
-template <bool, typename T>
+template <typename T, bool>
 struct abs_return_type
-{
-};
-
-template <typename T>
-struct abs_return_type<true, T>
-{
-  typedef std::make_unsigned_t<T> type;
-};
-
-template <typename T>
-struct abs_return_type<false, T>
 {
   typedef T type;
 };
 
 template <typename T>
+struct abs_return_type<T, true>
+{
+  typedef std::make_unsigned_t<T> type;
+};
+
+template <typename T>
 using return_t = typename abs_return_type<
-  std::is_signed<T>::value &&
-  !std::is_floating_point<T>::value,
-  T>::type;
+  T, std::is_signed_v<T> && !std::is_floating_point_v<T>>::type;
 
 } // namespace details
 
